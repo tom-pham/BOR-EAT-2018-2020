@@ -1,0 +1,7 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,N
+DeerCk_Wild_2018,1,DeerCk_RST to DeerCk3,441.87 to 433.16,DeerCk,0.7 (0.1),0.49,0.85,19
+DeerCk_Wild_2018,2,DeerCk3 to Abv_WoodsonBr,433.16 to 425.15,DeerCk,0.71 (0.13),0.43,0.89,13
+DeerCk_Wild_2018,3,Abv_WoodsonBr to GCID_abv,425.15 to 406.11,Upper Sac R,0.82 (0.08),0.61,0.93,10
+DeerCk_Wild_2018,4,GCID_abv to Blw_IrvineFinch,406.11 to 394.66,Upper Sac R,0.91 (0.08),0.57,0.99,9
+DeerCk_Wild_2018,5,Blw_IrvineFinch to BlwOrd,394.66 to 361.72,Upper Sac R,0.78 (0.09),0.56,0.91,4
+DeerCk_Wild_2018,6,BlwOrd to ButteBr,361.72 to 344.1,Upper Sac R,0.67 (0.32),0.1,0.97,2

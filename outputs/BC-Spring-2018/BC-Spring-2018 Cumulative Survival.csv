@@ -1,0 +1,5 @@
+Reach #,GEN,RKM,Region,Survival estimate (SE),LCI,UCI
+1,UpperButte_RST_Rel,340.85,Butte Creek,1 (NA),NA,NA
+2,UpperButte1,324.1,Butte Creek,0.39 (0.063),0.275,0.519
+3,UpperButte2,307.16,Butte Creek,0.102 (0.039),0.046,0.208
+4,UpperButte3,267.21,Butte Creek,0.017 (0.017),0.002,0.111

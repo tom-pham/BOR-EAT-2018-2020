@@ -1,0 +1,19 @@
+StudyID,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,reach_num,count
+ColemanLateFall_2018,BattleCk_CNFH_Rel to BattleCk4,517.34 to 508.25,Battle Ck,0.85 (0.02),0.82,0.88,1,400
+ColemanLateFall_2018,BattleCk4 to Blw_Paynes_Ck,508.25 to 476.27,Upper Sac R,0.98 (0),0.97,0.98,2,460
+ColemanLateFall_2018,Blw_Paynes_Ck to Abv_Altube1,476.27 to 460.4,Upper Sac R,0.97 (0.01),0.95,0.98,3,437
+ColemanLateFall_2018,Abv_Altube1 to Mill_Ck_Conf,460.4 to 441.31,Upper Sac R,0.99 (0),0.98,1,4,376
+ColemanLateFall_2018,Mill_Ck_Conf to Abv_WoodsonBr,441.31 to 425.15,Upper Sac R,0.99 (0.01),0.97,0.99,5,419
+ColemanLateFall_2018,Abv_WoodsonBr to Blw_IrvineFinch,425.15 to 394.66,Upper Sac R,0.95 (0.01),0.94,0.96,6,353
+ColemanLateFall_2018,Blw_IrvineFinch to BlwOrd,394.66 to 361.72,Upper Sac R,0.95 (0.01),0.93,0.96,7,303
+ColemanLateFall_2018,BlwOrd to ButteBr,361.72 to 344.1,Upper Sac R,0.96 (0.01),0.93,0.97,8,228
+ColemanLateFall_2018,ButteBr to Colusa AC2,344.1 to 318.61,Upper Sac R,0.97 (0.01),0.95,0.98,9,258
+ColemanLateFall_2018,Colusa AC2 to Colusa BC2,318.61 to 296.27,Lower Sac R,0.98 (0.01),0.96,0.99,10,239
+ColemanLateFall_2018,Colusa BC2 to Blw_Knights_GS3,296.27 to 212.8,Lower Sac R,0.98 (0),0.98,0.99,11,208
+ColemanLateFall_2018,Blw_Knights_GS3 to Blw_Elkhorn_GS1,212.8 to 191.92,Lower Sac R,0.97 (0.01),0.95,0.99,12,182
+ColemanLateFall_2018,Blw_Elkhorn_GS1 to TowerBridge,191.92 to 172,Lower Sac R,0.99 (0.01),0.96,1,13,166
+ColemanLateFall_2018,TowerBridge to Hood,172 to 138.22,Lower Sac R,1 (0),1,1,14,174
+ColemanLateFall_2018,Hood to Chipps,138.22 to 71.48,Delta,0.87 (0.01),0.84,0.89,15,75
+ColemanLateFall_2018,Chipps to BeniciaW,71.48 to 52.04,Bay,0.92 (0.03),0.84,0.96,16,60
+ColemanLateFall_2018,BeniciaW to GoldenGateE,52.04 to 1.71,Bay,1 (0),1,1,17,23
+ColemanLateFall_2018,GoldenGateE to GoldenGateW,1.71 to 0.8,Bay,0 (0),0,1,18,23

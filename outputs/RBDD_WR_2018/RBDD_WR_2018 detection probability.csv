@@ -1,0 +1,31 @@
+estimate,se,lcl,ucl,reach_start,reach_end,rkm_start,rkm_end,Reach,RKM,Region,reach_num
+1,3.165729e-6,0.9999938,1.0000062,RBDD_Rel,Abv_Altube1,461.57,460.4,"RBDD_Rel to 
+Abv_Altube1",461.57 to 460.4,Upper Sac R,1
+1,0,1,1,Abv_Altube1,Abv_Altube2,460.4,460.07,"Abv_Altube1 to 
+Abv_Altube2",460.4 to 460.07,Upper Sac R,2
+0.9285718,0.0688303,0.629706,0.9900379,Abv_Altube2,JV_Glide1,460.07,458.67,"Abv_Altube2 to 
+JV_Glide1",460.07 to 458.67,Upper Sac R,3
+1,4.728494e-7,0.9999991,1.0000009,JV_Glide1,Blw_Salt,458.67,456.88,"JV_Glide1 to 
+Blw_Salt",458.67 to 456.88,Upper Sac R,4
+1,0,1,1,Blw_Salt,BankRobber,456.88,452.55,"Blw_Salt to 
+BankRobber",456.88 to 452.55,Upper Sac R,5
+1,0,1,1,BankRobber,Hunters,452.55,450.355,"BankRobber to 
+Hunters",452.55 to 450.355,Upper Sac R,6
+1,0,1,1,Hunters,Lwr_Ant_Crk,450.355,447.29999999999995,"Hunters to 
+Lwr_Ant_Crk",450.355 to 447.3,Upper Sac R,7
+1,0,1,1,Lwr_Ant_Crk,Mill_Ck_Conf,447.29999999999995,441.31,"Lwr_Ant_Crk to 
+Mill_Ck_Conf",447.3 to 441.31,Upper Sac R,8
+1,0,1,1,Mill_Ck_Conf,Abv_WoodsonBr,441.31,425.15,"Mill_Ck_Conf to 
+Abv_WoodsonBr",441.31 to 425.15,Upper Sac R,9
+1,0,1,1,Abv_WoodsonBr,Blw_Woodson,425.15,421.4,"Abv_WoodsonBr to 
+Blw_Woodson",425.15 to 421.4,Upper Sac R,10
+1,2.263136e-6,0.9999956,1.0000044,Blw_Woodson,Abv_Otter_Island,421.4,419.39,"Blw_Woodson to 
+Abv_Otter_Island",421.4 to 419.39,Upper Sac R,11
+1,0,1,1,Abv_Otter_Island,GCID_abv,419.39,406.11,"Abv_Otter_Island to 
+GCID_abv",419.39 to 406.11,Upper Sac R,12
+1,0,1,1,GCID_abv,GCID_blw,406.11,404.42,"GCID_abv to 
+GCID_blw",406.11 to 404.42,Upper Sac R,13
+1,0,1,1,GCID_blw,Blw_IrvineFinch,404.42,394.66,"GCID_blw to 
+Blw_IrvineFinch",404.42 to 394.66,Upper Sac R,14
+0.5479677,123.21119,6.74326e-309,1,Blw_IrvineFinch,BlwOrd,394.66,361.72,"Blw_IrvineFinch to 
+BlwOrd",394.66 to 361.72,Upper Sac R,15

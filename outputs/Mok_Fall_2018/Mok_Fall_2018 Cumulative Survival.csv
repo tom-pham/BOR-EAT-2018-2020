@@ -1,0 +1,6 @@
+Reach #,GEN,RKM,Region,Survival estimate (SE),LCI,UCI
+0,Sherman_Island_Rel,89.76,West Delta,1 (NA),NA,NA
+1,Chipps,71.47999999999999,West Delta,0.199 (0.022),0.159,0.246
+2,Benicia,52.14,Carquinez Strait,0.147 (0.02),0.112,0.189
+3,GoldenGateE,1.71,SF Bay,0.053 (0.013),0.033,0.084
+4,GoldenGateW,0.8,SF Bay,0.053 (0.013),0.033,0.084

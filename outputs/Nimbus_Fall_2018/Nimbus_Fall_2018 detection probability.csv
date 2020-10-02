@@ -1,0 +1,21 @@
+estimate,se,lcl,ucl,reach_start,reach_end,rkm_start,rkm_end,Reach,RKM,Region,reach_num
+0.7538461,0.037781,0.6726444,0.820287,AR_Sunrise_Ramp_Rel,TowerBridge,206.04,172,"AR_Sunrise_Ramp_Rel to 
+TowerBridge",206.04 to 172,Amer R,1
+0.729687,0.0404401,0.6436368,0.8013712,TowerBridge,SacTrawl1,172,167,"TowerBridge to 
+SacTrawl1",172 to 167,Lower Sac R,2
+0.729687,0.0404401,0.6436368,0.8013711,SacTrawl1,SacTrawl2,167,166.63,"SacTrawl1 to 
+SacTrawl2",167 to 166.63,Lower Sac R,3
+0.3946266,0.0427498,0.3146127,0.4807173,SacTrawl2,Hood,166.63,138.22,"SacTrawl2 to 
+Hood",166.63 to 138.22,Lower Sac R,4
+0.162844,0.0578853,0.0780276,0.3089607,Hood,ChippsE,138.22,71.72,"Hood to 
+ChippsE",138.22 to 71.72,Lower Sac R,5
+0.162844,0.0578853,0.0780276,0.3089607,ChippsE,ChippsW,71.72,71.24,"ChippsE to 
+ChippsW",71.72 to 71.24,West Delta,6
+0.3024246,0.074338,0.1785166,0.4637817,ChippsW,BeniciaE,71.24,52.24,"ChippsW to 
+BeniciaE",71.24 to 52.24,West Delta,7
+0.2791611,0.072168,0.1608996,0.4388813,BeniciaE,BeniciaW,52.24,52.04,"BeniciaE to 
+BeniciaW",52.24 to 52.04,Carquinez Strait,8
+0.9565217,0.0425226,0.7478148,0.9939106,BeniciaW,GoldenGateE,52.04,1.71,"BeniciaW to 
+GoldenGateE",52.04 to 1.71,Carquinez Strait,9
+1,0,1,1,GoldenGateE,GoldenGateW,1.71,0.8,"GoldenGateE to 
+GoldenGateW",1.71 to 0.8,SF Bay,10

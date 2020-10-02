@@ -1,0 +1,49 @@
+StudyID,estimate,se,lcl,ucl,reach_start,reach_end,rkm_start,rkm_end,Reach,RKM,Region
+SB_Spring_2018,0.9868488,0.0075447,0.9600207,0.9957535,SutterBypass_Weir2_RST_Rel,Butte1,249.54,249.05,"SutterBypass_Weir2_RST_Rel to 
+Butte1",249.54 to 249.05,Sutter Bypass
+SB_Spring_2018,1,1.857798e-7,0.9999996,1.0000004,Butte1,Butte2,249.05,238.46,"Butte1 to 
+Butte2",249.05 to 238.46,Sutter Bypass
+SB_Spring_2018,1,8.196172e-7,0.9999984,1.0000016,Butte2,Butte3,238.46,226.46,"Butte2 to 
+Butte3",238.46 to 226.46,Sutter Bypass
+SB_Spring_2018,0.8389864,0.0338352,0.7612946,0.8948833,Butte3,Butte6,226.46,206.48,"Butte3 to 
+Butte6",226.46 to 206.48,Sutter Bypass
+SB_Spring_2018,0.9906635,0.0092876,0.9368098,0.9986849,Butte6,TowerBridge,206.48,172,"Butte6 to 
+TowerBridge",206.48 to 172,Sutter Bypass
+SB_Spring_2018,0.8213234,0.0353274,0.7414482,0.8804995,TowerBridge,Hood,172,138.22,"TowerBridge to 
+Hood",172 to 138.22,Lower Sac R
+SB_Spring_2018,1,7.782678e-7,0.9999985,1.0000015,Hood,ChippsE,138.22,71.72,"Hood to 
+ChippsE",138.22 to 71.72,Lower Sac R
+SB_Spring_2018,0.9473683,0.0295764,0.8491254,0.9829261,ChippsE,ChippsW,71.72,71.24,"ChippsE to 
+ChippsW",71.72 to 71.24,West Delta
+SB_Spring_2018,0.905134,0.045035,0.7734054,0.9638617,ChippsW,BeniciaE,71.24,52.24,"ChippsW to 
+BeniciaE",71.24 to 52.24,West Delta
+SB_Spring_2018,0.8189351,0.0578014,0.6781142,0.9066312,BeniciaE,BeniciaW,52.24,52.04,"BeniciaE to 
+BeniciaW",52.24 to 52.04,Carquinez Strait
+SB_Spring_2018,0.4705949,0.1210512,0.2553857,0.6973222,BeniciaW,GoldenGateE,52.04,1.71,"BeniciaW to 
+GoldenGateE",52.04 to 1.71,Carquinez Strait
+SB_Spring_2018,0.5803376,0.7212684,0.0041502,0.9978255,GoldenGateE,GoldenGateW,1.71,0.8,"GoldenGateE to 
+GoldenGateW",1.71 to 0.8,SF Bay
+SB_Spring_2019,1,3.149336e-7,0.9999994,1.0000006,SutterBypass_Weir2_RST_Rel,Butte1,249.54,249.05,"SutterBypass_Weir2_RST_Rel to 
+Butte1",249.54 to 249.05,Sutter Bypass
+SB_Spring_2019,1,1.443461e-5,2.876392e-301,1,Butte1,Butte2,249.05,238.46,"Butte1 to 
+Butte2",249.05 to 238.46,Sutter Bypass
+SB_Spring_2019,1,5.155189e-8,0.9999999,1.0000001,Butte2,Butte3,238.46,226.46,"Butte2 to 
+Butte3",238.46 to 226.46,Sutter Bypass
+SB_Spring_2019,1,1.750827e-7,0.9999997,1.0000003,Butte3,Butte6,226.46,206.48,"Butte3 to 
+Butte6",226.46 to 206.48,Sutter Bypass
+SB_Spring_2019,0.9161411,0.0566475,0.7202785,0.9788808,Butte6,TowerBridge,206.48,172,"Butte6 to 
+TowerBridge",206.48 to 172,Sutter Bypass
+SB_Spring_2019,0.6298471,0.0845691,0.4552676,0.7760043,TowerBridge,Hood,172,138.22,"TowerBridge to 
+Hood",172 to 138.22,Lower Sac R
+SB_Spring_2019,1,0,1,1,Hood,ChippsE,138.22,71.72,"Hood to 
+ChippsE",138.22 to 71.72,Lower Sac R
+SB_Spring_2019,1,3.072119e-10,1,1,ChippsE,ChippsW,71.72,71.24,"ChippsE to 
+ChippsW",71.72 to 71.24,West Delta
+SB_Spring_2019,1,0,1,1,ChippsW,BeniciaE,71.24,52.24,"ChippsW to 
+BeniciaE",71.24 to 52.24,West Delta
+SB_Spring_2019,1,5.71145e-12,1,1,BeniciaE,BeniciaW,52.24,52.04,"BeniciaE to 
+BeniciaW",52.24 to 52.04,Carquinez Strait
+SB_Spring_2019,1,2.822141e-9,1,1,BeniciaW,GoldenGateE,52.04,1.71,"BeniciaW to 
+GoldenGateE",52.04 to 1.71,Carquinez Strait
+SB_Spring_2019,1,8.496266e-12,1,1,GoldenGateE,GoldenGateW,1.71,0.8,"GoldenGateE to 
+GoldenGateW",1.71 to 0.8,SF Bay

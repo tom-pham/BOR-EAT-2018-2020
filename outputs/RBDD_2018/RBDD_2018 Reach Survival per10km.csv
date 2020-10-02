@@ -1,0 +1,16 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,N
+RBDD_2018,1,RBDD_Rel to Blw_Salt,461.57 to 456.88,Upper Sac R,0.83 (0.03),0.76,0.88,281
+RBDD_2018,2,Blw_Salt to Mill_Ck_Conf,456.88 to 441.31,Upper Sac R,0.82 (0.02),0.78,0.86,207
+RBDD_2018,3,Mill_Ck_Conf to Abv_WoodsonBr,441.31 to 425.15,Upper Sac R,0.85 (0.02),0.81,0.89,160
+RBDD_2018,4,Abv_WoodsonBr to GCID_abv,425.15 to 406.11,Upper Sac R,0.78 (0.03),0.73,0.83,100
+RBDD_2018,5,GCID_abv to Blw_IrvineFinch,406.11 to 394.66,Upper Sac R,0.66 (0.05),0.56,0.74,60
+RBDD_2018,6,Blw_IrvineFinch to BlwOrd,394.66 to 361.72,Upper Sac R,0.84 (0.03),0.78,0.89,35
+RBDD_2018,7,BlwOrd to ButteBr,361.72 to 344.1,Upper Sac R,0.9 (0.04),0.79,0.95,29
+RBDD_2018,8,ButteBr to Colusa AC2,344.1 to 318.61,Lower Sac R,0.9 (0.04),0.8,0.95,22
+RBDD_2018,9,Colusa AC2 to Colusa BC2,318.61 to 296.27,Lower Sac R,0.92 (0.04),0.79,0.97,16
+RBDD_2018,10,Colusa BC2 to AbvTisdale,296.27 to 269.23,Lower Sac R,0.98 (0.02),0.85,1,17
+RBDD_2018,11,AbvTisdale to Knights_RST,269.23 to 222.05,Lower Sac R,0.99 (0.01),0.91,1,16
+RBDD_2018,12,Knights_RST to Blw_FRConf,222.05 to 203.46,Lower Sac R,1 (0),1,1,13
+RBDD_2018,13,Blw_FRConf to I80-50_Br,203.46 to 170.74,Lower Sac R,0.78 (0.07),0.62,0.88,7
+RBDD_2018,14,I80-50_Br to Freeport,170.74 to 152.43,Lower Sac R,0.74 (0.13),0.43,0.91,4
+RBDD_2018,15,Freeport to Hood,152.43 to 138.22,Lower Sac R,0.38 (0.23),0.08,0.8,1

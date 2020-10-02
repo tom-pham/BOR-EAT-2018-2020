@@ -1,0 +1,4 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,N
+BC-Spring-2018,1,UpperButte_RST_Rel to UpperButte1,340.85 to 324.1,Butte Creek,0.39 (0.06),0.27,0.52,23
+BC-Spring-2018,2,UpperButte1 to UpperButte2,324.1 to 307.16,Butte Creek,0.26 (0.09),0.12,0.47,6
+BC-Spring-2018,3,UpperButte2 to UpperButte3,307.16 to 267.21,Butte Creek,0.17 (0.15),0.02,0.63,1

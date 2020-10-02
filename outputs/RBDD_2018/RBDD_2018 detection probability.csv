@@ -1,0 +1,65 @@
+estimate,se,lcl,ucl,reach_start,reach_end,rkm_start,rkm_end,Reach,RKM,Region,reach_num
+1,0,1,1,RBDD_Rel,JV_Glide1,461.57,458.67,"RBDD_Rel to 
+JV_Glide1",461.57 to 458.67,Upper Sac R,1
+0.996063,0.0039292,0.9726024,0.9994457,JV_Glide1,Blw_Salt,458.67,456.88,"JV_Glide1 to 
+Blw_Salt",458.67 to 456.88,Upper Sac R,2
+1,0,1,1,Blw_Salt,BankRobber,456.88,452.55,"Blw_Salt to 
+BankRobber",456.88 to 452.55,Upper Sac R,3
+0.9913795,0.0060693,0.9662028,0.9978431,BankRobber,Hunters,452.55,450.355,"BankRobber to 
+Hunters",452.55 to 450.355,Upper Sac R,4
+1,0,1,1,Hunters,Lwr_Ant_Crk,450.355,447.29999999999995,"Hunters to 
+Lwr_Ant_Crk",450.355 to 447.3,Upper Sac R,5
+1,0,1,1,Lwr_Ant_Crk,Mill_Ck_Conf,447.29999999999995,441.31,"Lwr_Ant_Crk to 
+Mill_Ck_Conf",447.3 to 441.31,Upper Sac R,6
+1,3.555328e-11,1,1,Mill_Ck_Conf,Abv_WoodsonBr,441.31,425.15,"Mill_Ck_Conf to 
+Abv_WoodsonBr",441.31 to 425.15,Upper Sac R,7
+1,0,1,1,Abv_WoodsonBr,Blw_Woodson,425.15,421.4,"Abv_WoodsonBr to 
+Blw_Woodson",425.15 to 421.4,Upper Sac R,8
+1,7.728639e-6,0.9999848,1.0000151,Blw_Woodson,Abv_Otter_Island,421.4,419.39,"Blw_Woodson to 
+Abv_Otter_Island",421.4 to 419.39,Upper Sac R,9
+1,0,1,1,Abv_Otter_Island,GCID_abv,419.39,406.11,"Abv_Otter_Island to 
+GCID_abv",419.39 to 406.11,Upper Sac R,10
+0.9016395,0.0381298,0.7978464,0.9551379,GCID_abv,GCID_blw,406.11,404.42,"GCID_abv to 
+GCID_blw",406.11 to 404.42,Upper Sac R,11
+0.9714296,0.0281599,0.8231364,0.9959904,GCID_blw,Blw_IrvineFinch,404.42,394.66,"GCID_blw to 
+Blw_IrvineFinch",404.42 to 394.66,Upper Sac R,12
+1,0,1,1,Blw_IrvineFinch,BlwOrd,394.66,361.72,"Blw_IrvineFinch to 
+BlwOrd",394.66 to 361.72,Upper Sac R,13
+1,0,1,1,BlwOrd,ButteBr,361.72,344.1,"BlwOrd to 
+ButteBr",361.72 to 344.1,Upper Sac R,14
+1,0,1,1,ButteBr,Colusa AC3,344.1,331.15,"ButteBr to 
+Colusa AC3",344.1 to 331.15,Lower Sac R,15
+1,0,1,1,Colusa AC3,Colusa AC2,331.15,318.61,"Colusa AC3 to 
+Colusa AC2",331.15 to 318.61,Lower Sac R,16
+0.9444451,0.0539899,0.6934705,0.9922329,Colusa AC2,AbvColusaBr,318.61,307.73,"Colusa AC2 to 
+AbvColusaBr",318.61 to 307.73,Lower Sac R,17
+0.8823509,0.0781433,0.6316859,0.9704108,AbvColusaBr,Colusa BC2,307.73,296.27,"AbvColusaBr to 
+Colusa BC2",307.73 to 296.27,Lower Sac R,18
+1,0,1,1,Colusa BC2,Colusa BC3,296.27,287.2,"Colusa BC2 to 
+Colusa BC3",296.27 to 287.2,Lower Sac R,19
+1,0,1,1,Colusa BC3,Colusa BC4,287.2,280.4,"Colusa BC3 to 
+Colusa BC4",287.2 to 280.4,Lower Sac R,20
+1,2.752156e-12,1,1,Colusa BC4,AbvTisdale,280.4,269.23,"Colusa BC4 to 
+AbvTisdale",280.4 to 269.23,Lower Sac R,21
+1,0,1,1,AbvTisdale,BlwTisdale,269.23,261.4,"AbvTisdale to 
+BlwTisdale",269.23 to 261.4,Lower Sac R,22
+1,0,1,1,BlwTisdale,BlwChinaBend,261.4,240.61,"BlwTisdale to 
+BlwChinaBend",261.4 to 240.61,Lower Sac R,23
+1,8.281701e-12,1,1,BlwChinaBend,Knights_RST,240.61,222.05,"BlwChinaBend to 
+Knights_RST",240.61 to 222.05,Lower Sac R,24
+1,0,1,1,Knights_RST,Abv_FremontWeir,222.05,215.18,"Knights_RST to 
+Abv_FremontWeir",222.05 to 215.18,Lower Sac R,25
+0.8124986,0.0975784,0.552537,0.9382967,Abv_FremontWeir,Blw_FRConf,215.18,203.46,"Abv_FremontWeir to 
+Blw_FRConf",215.18 to 203.46,Lower Sac R,26
+1,0,1,1,Blw_FRConf,TowerBridge,203.46,172,"Blw_FRConf to 
+TowerBridge",203.46 to 172,Lower Sac R,27
+1,0,1,1,TowerBridge,I80-50_Br,172,170.74,"TowerBridge to 
+I80-50_Br",172 to 170.74,Lower Sac R,28
+1,0,1,1,I80-50_Br,SacTrawl1,170.74,167,"I80-50_Br to 
+SacTrawl1",170.74 to 167,Lower Sac R,29
+1,0,1,1,SacTrawl1,SacTrawl2,167,166.63,"SacTrawl1 to 
+SacTrawl2",167 to 166.63,Lower Sac R,30
+1,0,1,1,SacTrawl2,Freeport,166.63,152.43,"SacTrawl2 to 
+Freeport",166.63 to 152.43,Lower Sac R,31
+1,0,1,1,Freeport,Hood,152.43,138.22,"Freeport to 
+Hood",152.43 to 138.22,Lower Sac R,32

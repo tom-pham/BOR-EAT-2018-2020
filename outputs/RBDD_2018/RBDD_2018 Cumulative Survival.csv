@@ -1,0 +1,17 @@
+Reach #,GEN,RKM,Region,Survival estimate (SE),LCI,UCI
+0,RBDD_Rel,461.57,Upper Sac R,1 (NA),NA,NA
+1,Blw_Salt,456.88,Upper Sac R,0.915 (0.016),0.879,0.942
+2,Mill_Ck_Conf,441.31,Upper Sac R,0.674 (0.027),0.62,0.724
+3,Abv_WoodsonBr,425.15,Upper Sac R,0.521 (0.029),0.465,0.577
+4,GCID_abv,406.11,Upper Sac R,0.326 (0.027),0.276,0.38
+5,Blw_IrvineFinch,394.66,Upper Sac R,0.201 (0.023),0.16,0.25
+6,BlwOrd,361.72,Upper Sac R,0.114 (0.018),0.083,0.155
+7,ButteBr,344.1,Lower Sac R,0.094 (0.017),0.066,0.133
+8,Colusa AC2,318.61,Lower Sac R,0.072 (0.015),0.048,0.106
+9,Colusa BC2,296.27,Lower Sac R,0.059 (0.014),0.038,0.092
+10,AbvTisdale,269.23,Lower Sac R,0.055 (0.013),0.035,0.087
+11,Knights_RST,222.05,Lower Sac R,0.052 (0.013),0.032,0.083
+12,Blw_FRConf,203.46,Lower Sac R,0.049 (0.014),0.029,0.084
+13,I80-50_Br,170.74,Lower Sac R,0.023 (0.009),0.011,0.047
+14,Freeport,152.43,Lower Sac R,0.013 (0.006),0.005,0.034
+15,Hood,138.22,Lower Sac R,0.003 (0.003),0,0.023

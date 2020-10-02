@@ -1,0 +1,5 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,N
+Mok_Fall_2018,1,Sherman_Island_Rel to Chipps,89.76 to 71.48,West Delta,0.41 (0.03),0.37,0.46,65
+Mok_Fall_2018,2,Chipps to Benicia,71.48 to 52.14,West Delta,0.85 (0.03),0.78,0.91,48
+Mok_Fall_2018,3,Benicia to GoldenGateE,52.14 to 1.71,Carquinez Strait,0.82 (0.03),0.75,0.87,12
+Mok_Fall_2018,4,GoldenGateE to GoldenGateW,1.71 to 0.8,SF Bay,0.86 (20.41),0,1,16

@@ -1,0 +1,23 @@
+StudyID,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,reach_num,count
+Winter_H_2018,Bonnyview to Blw_ClearCr,540.225 to 535.62,Upper Sac R,0.88 (0.02),0.84,0.92,1,565
+Winter_H_2018,Blw_ClearCr to BlwCowCr,535.62 to 520.69,Upper Sac R,0.98 (0),0.97,0.99,2,550
+Winter_H_2018,BlwCowCr to Battle_Conf,520.69 to 507.48,Upper Sac R,0.99 (0),0.98,1,3,544
+Winter_H_2018,Battle_Conf to Blw_Salt,507.48 to 456.88,Upper Sac R,0.98 (0),0.98,0.99,4,482
+Winter_H_2018,Blw_Salt to Mill_Ck_Conf,456.88 to 441.31,Upper Sac R,0.98 (0.01),0.97,0.99,5,377
+Winter_H_2018,Mill_Ck_Conf to Blw_Woodson,441.31 to 421.4,Upper Sac R,0.97 (0.01),0.95,0.98,6,444
+Winter_H_2018,Blw_Woodson to GCID_abv,421.4 to 406.11,Upper Sac R,0.92 (0.01),0.89,0.94,7,379
+Winter_H_2018,GCID_abv to Blw_IrvineFinch,406.11 to 394.66,Upper Sac R,0.87 (0.02),0.83,0.91,8,307
+Winter_H_2018,Blw_IrvineFinch to BlwOrd,394.66 to 361.72,Upper Sac R,0.91 (0.01),0.89,0.93,9,230
+Winter_H_2018,BlwOrd to ButteBr,361.72 to 344.1,Upper Sac R,0.92 (0.02),0.88,0.94,10,160
+Winter_H_2018,ButteBr to Colusa AC2,344.1 to 318.61,Lower Sac R,0.95 (0.01),0.92,0.97,11,187
+Winter_H_2018,Colusa AC2 to Colusa BC4,318.61 to 280.4,Lower Sac R,0.98 (0),0.97,0.99,12,165
+Winter_H_2018,Colusa BC4 to AbvTisdale,280.4 to 269.23,Lower Sac R,0.98 (0.01),0.95,0.99,13,175
+Winter_H_2018,AbvTisdale to BlwTisdale,269.23 to 261.4,Lower Sac R,0.99 (0.01),0.93,1,14,148
+Winter_H_2018,BlwTisdale to BlwChinaBend,261.4 to 240.61,Lower Sac R,1 (0),0.78,1,15,142
+Winter_H_2018,BlwChinaBend to Knights_RST,240.61 to 222.05,Lower Sac R,0.99 (0.01),0.97,1,16,173
+Winter_H_2018,Knights_RST to Blw_Elkhorn_GS1,222.05 to 191.92,Lower Sac R,0.99 (0.01),0.97,0.99,17,135
+Winter_H_2018,Blw_Elkhorn_GS1 to TowerBridge,191.92 to 172,Lower Sac R,1 (0),1,1,18,131
+Winter_H_2018,TowerBridge to Chipps,172 to 71.48,Lower Sac R,0.97 (0),0.96,0.98,19,120
+Winter_H_2018,Chipps to Benicia,71.48 to 52.14,West Delta,0.98 (0.02),0.9,1,20,102
+Winter_H_2018,Benicia to GoldenGateE,52.14 to 1.71,Carquinez Strait,0.92 (0.02),0.88,0.95,21,40
+Winter_H_2018,GoldenGateE to GoldenGateW,1.71 to 0.8,SF Bay,1 (0),1,1,22,57

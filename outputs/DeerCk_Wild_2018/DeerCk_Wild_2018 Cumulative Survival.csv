@@ -1,0 +1,8 @@
+Reach #,GEN,RKM,Region,Survival estimate (SE),LCI,UCI
+0,DeerCk_RST,441.87,DeerCk,1 (NA),NA,NA
+1,DeerCk3,433.16,DeerCk,0.731 (0.087),0.533,0.866
+2,Abv_WoodsonBr,425.15,Upper Sac R,0.556 (0.103),0.356,0.739
+3,GCID_abv,406.11,Upper Sac R,0.385 (0.095),0.221,0.579
+4,Blw_IrvineFinch,394.66,Upper Sac R,0.346 (0.093),0.191,0.543
+5,BlwOrd,361.72,Upper Sac R,0.154 (0.071),0.059,0.345
+6,ButteBr,344.1,Lower Sac R,0.077 (0.055),0.018,0.274

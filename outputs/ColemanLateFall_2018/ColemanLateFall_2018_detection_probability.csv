@@ -1,0 +1,83 @@
+estimate,se,lcl,ucl,reach_start,reach_end,rkm_start,rkm_end,Reach,RKM,Region,reach_num
+0.9593826,0.0086819,0.9385096,0.9733712,BattleCk_CNFH_Rel,BattleCk1,517.34,516.98,"BattleCk_CNFH_Rel to 
+BattleCk1",517.34 to 516.98,Battle Ck,1
+0.8469185,0.0160545,0.8127415,0.8758109,BattleCk1,BattleCk2,516.98,515.33,"BattleCk1 to 
+BattleCk2",516.98 to 515.33,Battle Ck,2
+0.7930414,0.0181401,0.7552347,0.8263513,BattleCk2,BattleCk3,515.33,511.45,"BattleCk2 to 
+BattleCk3",515.33 to 511.45,Battle Ck,3
+0.7930415,0.0181401,0.7552347,0.8263513,BattleCk3,BattleCk4,511.45,508.25,"BattleCk3 to 
+BattleCk4",511.45 to 508.25,Battle Ck,4
+0.9735682,0.0075287,0.9540415,0.9849295,BattleCk4,Blw_Paynes_Ck,508.25,476.27,"BattleCk4 to 
+Blw_Paynes_Ck",508.25 to 476.27,Battle Ck,5
+0.9733924,0.0075781,0.9537397,0.9848289,Blw_Paynes_Ck,Abv_RBPP,476.27,463.22,"Blw_Paynes_Ck to 
+Abv_RBPP",476.27 to 463.22,Upper Sac R,6
+0.968956,0.008167,0.9482728,0.9815301,Abv_RBPP,Abv_Altube1,463.22,460.4,"Abv_RBPP to 
+Abv_Altube1",463.22 to 460.4,Upper Sac R,7
+0.9733906,0.0075786,0.9537366,0.9848278,Abv_Altube1,Abv_Altube2,460.4,460.07,"Abv_Altube1 to 
+Abv_Altube2",460.4 to 460.07,Upper Sac R,8
+0.9620535,0.009027,0.9398139,0.9762827,Abv_Altube2,JV_Glide1,460.07,458.67,"Abv_Altube2 to 
+JV_Glide1",460.07 to 458.67,Upper Sac R,9
+0.9217002,0.0127064,0.8928882,0.9432545,JV_Glide1,Blw_Salt,458.67,456.88,"JV_Glide1 to 
+Blw_Salt",458.67 to 456.88,Upper Sac R,10
+0.9708519,0.0079655,0.950456,0.9830016,Blw_Salt,BankRobber,456.88,452.55,"Blw_Salt to 
+BankRobber",456.88 to 452.55,Upper Sac R,11
+0.9549549,0.0098429,0.9312156,0.9707584,BankRobber,Hunters,452.55,450.355,"BankRobber to 
+Hunters",452.55 to 450.355,Upper Sac R,12
+0.9727272,0.0077648,0.9525984,0.984448,Hunters,Lwr_Ant_Crk,450.355,447.29999999999995,"Hunters to 
+Lwr_Ant_Crk",450.355 to 447.3,Upper Sac R,13
+0.8511628,0.0171644,0.8142993,0.8817709,Lwr_Ant_Crk,Mill_Ck_Conf,447.29999999999995,441.31,"Lwr_Ant_Crk to 
+Mill_Ck_Conf",447.3 to 441.31,Upper Sac R,14
+0.9741176,0.0077022,0.9538764,0.98561,Mill_Ck_Conf,Abv_WoodsonBr,441.31,425.15,"Mill_Ck_Conf to 
+Abv_WoodsonBr",441.31 to 425.15,Upper Sac R,15
+0.9667458,0.0087385,0.9446423,0.9802086,Abv_WoodsonBr,Blw_Woodson,425.15,421.4,"Abv_WoodsonBr to 
+Blw_Woodson",425.15 to 421.4,Upper Sac R,16
+0.975,0.0078062,0.9541682,0.9864972,Blw_Woodson,Abv_Otter_Island,421.4,419.39,"Blw_Woodson to 
+Abv_Otter_Island",421.4 to 419.39,Upper Sac R,17
+0.9728996,0.008453,0.9503746,0.985358,Abv_Otter_Island,GCID_abv,419.39,406.11,"Abv_Otter_Island to 
+GCID_abv",419.39 to 406.11,Upper Sac R,18
+0.94871780000000006,0.0124875,0.9179414,0.9683494,GCID_abv,Blw_IrvineFinch,406.11,394.66,"GCID_abv to 
+Blw_IrvineFinch",406.11 to 394.66,Upper Sac R,19
+0.96875,0.0102526,0.9410441,0.9836617,Blw_IrvineFinch,BlwOrd,394.66,361.72,"Blw_IrvineFinch to 
+BlwOrd",394.66 to 361.72,Upper Sac R,20
+0.7849462,0.0245975,0.732849,0.829251,BlwOrd,ButteBr,361.72,344.1,"BlwOrd to 
+ButteBr",361.72 to 344.1,Upper Sac R,21
+0.8843283,0.0195368,0.8402019,0.9174667,ButteBr,Colusa AC3,344.1,331.15,"ButteBr to 
+Colusa AC3",344.1 to 331.15,Lower Sac R,22
+0.9607841,0.0121556,0.9286635,0.9787724,Colusa AC3,Colusa AC2,331.15,318.61,"Colusa AC3 to 
+Colusa AC2",331.15 to 318.61,Lower Sac R,23
+0.9346938,0.0157844,0.8960702,0.9596106,Colusa AC2,Colusa BC2,318.61,296.27,"Colusa AC2 to 
+Colusa BC2",318.61 to 296.27,Lower Sac R,24
+0.9543569,0.0134442,0.9194766,0.9745463,Colusa BC2,Colusa BC4,296.27,280.4,"Colusa BC2 to 
+Colusa BC4",296.27 to 280.4,Lower Sac R,25
+0.9194915,0.0177108,0.877238,0.9480627,Colusa BC4,AbvTisdale,280.4,269.23,"Colusa BC4 to 
+AbvTisdale",280.4 to 269.23,Lower Sac R,26
+0.859091,0.0234573,0.8065833,0.8991269,AbvTisdale,BlwTisdale,269.23,261.4,"AbvTisdale to 
+BlwTisdale",269.23 to 261.4,Lower Sac R,27
+0.9681721,0.0118367,0.934758,0.9847521,BlwTisdale,Knights_RST,261.4,222.05,"BlwTisdale to 
+Knights_RST",261.4 to 222.05,Lower Sac R,28
+0.8863547,0.0213985,0.8372169,0.9220409,Knights_RST,Abv_FremontWeir,222.05,215.18,"Knights_RST to 
+Abv_FremontWeir",222.05 to 215.18,Lower Sac R,29
+0.9454452,0.0153129,0.9064089,0.9687608,Abv_FremontWeir,Blw_Knights_GS3,215.18,212.8,"Abv_FremontWeir to 
+Blw_Knights_GS3",215.18 to 212.8,Lower Sac R,30
+0.867647,0.0237259,0.8138709,0.9076492,Blw_Knights_GS3,Blw_Elkhorn_GS1,212.8,191.92,"Blw_Knights_GS3 to 
+Blw_Elkhorn_GS1",212.8 to 191.92,Lower Sac R,31
+0.8137238,0.0272586,0.7543443,0.8613876,Blw_Elkhorn_GS1,TowerBridge,191.92,172,"Blw_Elkhorn_GS1 to 
+TowerBridge",191.92 to 172,Lower Sac R,32
+0.8235276,0.0266909,0.7650311,0.8699369,TowerBridge,I80-50_Br,172,170.74,"TowerBridge to 
+I80-50_Br",172 to 170.74,Lower Sac R,33
+0.9656842,0.0127456,0.9297841,0.9835539,I80-50_Br,SacTrawl1,170.74,167,"I80-50_Br to 
+SacTrawl1",170.74 to 167,Lower Sac R,34
+0.9754881,0.0108268,0.9424756,0.989761,SacTrawl1,SacTrawl2,167,166.63,"SacTrawl1 to 
+SacTrawl2",167 to 166.63,Lower Sac R,35
+0.8717829,0.0307143,0.7987091,0.9209544,SacTrawl2,Hood,166.63,138.22,"SacTrawl2 to 
+Hood",166.63 to 138.22,Lower Sac R,36
+0.3206558,0.033812300000000003,0.2582682,0.3901862,Hood,ChippsE,138.22,71.72,"Hood to 
+ChippsE",138.22 to 71.72,Lower Sac R,37
+0.9531246,0.0264214,0.8644982,0.984803,ChippsE,ChippsW,71.72,71.24,"ChippsE to 
+ChippsW",71.72 to 71.24,West Delta,38
+0.8950369,0.0493962,0.752632,0.9598368,ChippsW,BeniciaW,71.24,52.04,"ChippsW to 
+BeniciaW",71.24 to 52.04,West Delta,39
+0.343099,0.0592873,0.2377424,0.466567,BeniciaW,GoldenGateE,52.04,1.71,"BeniciaW to 
+GoldenGateE",52.04 to 1.71,Carquinez Strait,40
+0.5455977,0,0.5455977,0.5455977,GoldenGateE,GoldenGateW,1.71,0.8,"GoldenGateE to 
+GoldenGateW",1.71 to 0.8,SF Bay,41

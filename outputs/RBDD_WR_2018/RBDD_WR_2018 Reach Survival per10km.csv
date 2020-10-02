@@ -1,0 +1,10 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,N
+RBDD_WR_2018,1,RBDD_Rel to Blw_Salt,461.57 to 456.88,Upper Sac R,1 (0),1,1,14
+RBDD_WR_2018,2,Blw_Salt to BankRobber,456.88 to 452.55,Upper Sac R,0.84 (0.14),0.39,0.98,13
+RBDD_WR_2018,3,BankRobber to Lwr_Ant_Crk,452.55 to 447.3,Upper Sac R,0.86 (0.13),0.42,0.98,12
+RBDD_WR_2018,4,Lwr_Ant_Crk to Mill_Ck_Conf,447.3 to 441.31,Upper Sac R,0.74 (0.16),0.36,0.93,10
+RBDD_WR_2018,5,Mill_Ck_Conf to Abv_WoodsonBr,441.31 to 425.15,Upper Sac R,0.87 (0.09),0.6,0.97,8
+RBDD_WR_2018,6,Abv_WoodsonBr to Blw_Woodson,425.15 to 421.4,Upper Sac R,0.46 (0.25),0.11,0.86,6
+RBDD_WR_2018,7,Blw_Woodson to GCID_abv,421.4 to 406.11,Upper Sac R,0.77 (0.14),0.4,0.94,4
+RBDD_WR_2018,8,GCID_abv to GCID_blw,406.11 to 404.42,Upper Sac R,1 (0),1,1,4
+RBDD_WR_2018,9,GCID_blw to Blw_IrvineFinch,404.42 to 394.66,Upper Sac R,1 (0),1,1,4

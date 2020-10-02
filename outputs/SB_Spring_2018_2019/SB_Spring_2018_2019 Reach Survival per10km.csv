@@ -1,0 +1,21 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,N
+SB_Spring_2018,1,SutterBypass_Weir2_RST_Rel to Butte1,249.54 to 249.05,Sutter Bypass,0.23 (0.07),0.12,0.41,295
+SB_Spring_2018,2,Butte1 to Butte2,249.05 to 238.46,Sutter Bypass,0.77 (0.02),0.72,0.82,228
+SB_Spring_2018,3,Butte2 to Butte3,238.46 to 226.46,Sutter Bypass,0.92 (0.02),0.88,0.94,205
+SB_Spring_2018,4,Butte3 to Butte6,226.46 to 206.48,Sutter Bypass,0.78 (0.02),0.73,0.82,105
+SB_Spring_2018,5,Butte6 to TowerBridge,206.48 to 172,Sutter Bypass,0.98 (0.01),0.96,0.99,117
+SB_Spring_2018,6,TowerBridge to Hood,172 to 138.22,Lower Sac R,0.99 (0.01),0.82,1,97
+SB_Spring_2018,7,Hood to Chipps,138.22 to 71.48,Lower Sac R,0.9 (0.01),0.87,0.92,57
+SB_Spring_2018,8,Chipps to Benicia,71.48 to 52.14,West Delta,0.92 (0.03),0.82,0.96,44
+SB_Spring_2018,9,Benicia to GoldenGateE,52.14 to 1.71,Carquinez Strait,0.91 (0.04),0.8,0.96,14
+SB_Spring_2018,10,GoldenGateE to GoldenGateW,1.71 to 0.8,SF Bay,1 (2.16),0,1,17
+SB_Spring_2019,1,SutterBypass_Weir2_RST_Rel to Butte1,249.54 to 249.05,Sutter Bypass,0.4 (0.12),0.2,0.64,196
+SB_Spring_2019,2,Butte1 to Butte2,249.05 to 238.46,Sutter Bypass,0.57 (0.03),0.51,0.64,109
+SB_Spring_2019,3,Butte2 to Butte3,238.46 to 226.46,Sutter Bypass,0.88 (0.03),0.81,0.92,93
+SB_Spring_2019,4,Butte3 to Butte6,226.46 to 206.48,Sutter Bypass,0.75 (0.03),0.67,0.81,52
+SB_Spring_2019,5,Butte6 to TowerBridge,206.48 to 172,Sutter Bypass,0.89 (0.03),0.83,0.93,32
+SB_Spring_2019,6,TowerBridge to Hood,172 to 138.22,Lower Sac R,1 (0),1,1,22
+SB_Spring_2019,7,Hood to Chipps,138.22 to 71.48,Lower Sac R,0.75 (0.05),0.65,0.83,5
+SB_Spring_2019,8,Chipps to Benicia,71.48 to 52.14,West Delta,0.77 (0.14),0.4,0.94,3
+SB_Spring_2019,9,Benicia to GoldenGateE,52.14 to 1.71,Carquinez Strait,0.92 (0.07),0.61,0.99,2
+SB_Spring_2019,10,GoldenGateE to GoldenGateW,1.71 to 0.8,SF Bay,1 (0),1,1,2

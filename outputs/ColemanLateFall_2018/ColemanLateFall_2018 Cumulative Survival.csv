@@ -1,0 +1,20 @@
+cum.phi,cum.phi.se,LCI,UCI,StudyID,survival_to,survival_to_rkm,reach_num,Region
+1,NA,NA,NA,ColemanLateFall_2018,BattleCk_CNFH_Rel,517.34,1,Battle Ck
+0.864,0.015,0.831,0.891,ColemanLateFall_2018,BattleCk4,508.25,2,Battle Ck
+0.804,0.016,0.77,0.834,ColemanLateFall_2018,Blw_Paynes_Ck,476.27,3,Upper Sac R
+0.766,0.018,0.73,0.798,ColemanLateFall_2018,Abv_Altube1,460.4,4,Upper Sac R
+0.751,0.018,0.714,0.785,ColemanLateFall_2018,Mill_Ck_Conf,441.31,5,Upper Sac R
+0.733,0.018,0.696,0.768,ColemanLateFall_2018,Abv_WoodsonBr,425.15,6,Upper Sac R
+0.631,0.02,0.591,0.67,ColemanLateFall_2018,Blw_IrvineFinch,394.66,7,Upper Sac R
+0.53,0.021,0.489,0.57,ColemanLateFall_2018,BlwOrd,361.72,8,Upper Sac R
+0.491,0.021,0.45,0.533,ColemanLateFall_2018,ButteBr,344.1,9,Upper Sac R
+0.451,0.021,0.411,0.491,ColemanLateFall_2018,Colusa AC2,318.61,10,Lower Sac R
+0.431,0.021,0.391,0.472,ColemanLateFall_2018,Colusa BC2,296.27,11,Lower Sac R
+0.378,0.02,0.339,0.418,ColemanLateFall_2018,Blw_Knights_GS3,212.8,12,Lower Sac R
+0.358,0.02,0.32,0.398,ColemanLateFall_2018,Blw_Elkhorn_GS1,191.92,13,Lower Sac R
+0.348,0.02,0.31,0.388,ColemanLateFall_2018,TowerBridge,172,14,Lower Sac R
+0.348,0.02,0.31,0.388,ColemanLateFall_2018,Hood,138.22,15,Lower Sac R
+0.135,0.014,0.109,0.165,ColemanLateFall_2018,Chipps,71.47999999999999,16,Lower Sac R
+0.115,0.014,0.09,0.145,ColemanLateFall_2018,BeniciaW,52.04,17,Bay
+0.115,0.014,0.09,0.145,ColemanLateFall_2018,GoldenGateE,1.71,18,Bay
+0.04,0.187,0,0.998,ColemanLateFall_2018,GoldenGateW,0.8,19,Bay

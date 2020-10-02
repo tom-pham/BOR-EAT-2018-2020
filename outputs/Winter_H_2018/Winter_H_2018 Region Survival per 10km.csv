@@ -1,0 +1,5 @@
+StudyID,Reach,RKM,Region,Survival rate per 10km (SE),LCI,UCI,reach_num,count
+Winter_H_2018,Bonnyview to ButteBr,540.225 to 344.1,Upper Sacramento,0.95 (0),0.95,0.96,1,160
+Winter_H_2018,ButteBr to TowerBridge,344.1 to 172,Lower Sacramento,0.98 (0),0.97,0.99,2,131
+Winter_H_2018,TowerBridge to Chipps,172 to 71.48,Delta,0.97 (0.01),0.96,0.98,3,120
+Winter_H_2018,Chipps to GoldenGateE,71.48 to 1.71,Bay,0.94 (0.01),0.91,0.96,4,40

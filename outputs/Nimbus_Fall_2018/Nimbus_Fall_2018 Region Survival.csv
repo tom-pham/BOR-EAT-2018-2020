@@ -1,0 +1,5 @@
+StudyID,Reach #,Reach,RKM,Region,Survival rate (SE),LCI,UCI,N
+Nimbus_Fall_2018,1,AR_Sunrise_Ramp_Rel to TowerBridge,206.04 to 172,American River,0.68 (0.04),0.6,0.75,102
+Nimbus_Fall_2018,2,TowerBridge to Hood,172 to 138.22,Lower Sacramento,0.52 (0.05),0.42,0.61,53
+Nimbus_Fall_2018,3,Hood to Chipps,138.22 to 71.48,Delta,0.09 (0.04),0.04,0.21,5
+Nimbus_Fall_2018,4,Chipps to GoldenGateE,71.48 to 1.71,Bay,0.4 (0.22),0.1,0.8,2

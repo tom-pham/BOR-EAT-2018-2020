@@ -1,0 +1,9 @@
+Reach #,GEN,RKM,Region,Survival estimate (SE),LCI,UCI
+0,AR_Sunrise_Ramp_Rel,206.04,Amer R,1 (NA),NA,NA
+1,TowerBridge,172,Lower Sac R,0.68 (0.038),0.601,0.75
+2,SacTrawl,166.815,Lower Sac R,0.653 (0.039),0.574,0.725
+3,Hood,138.22,Lower Sac R,0.353 (0.039),0.281,0.433
+4,Chipps,71.47999999999999,West Delta,0.033 (0.015),0.014,0.078
+5,Benicia,52.14,Carquinez Strait,0.02 (0.011),0.006,0.06
+6,GoldenGateE,1.71,SF Bay,0.013 (0.009),0.003,0.052
+7,GoldenGateW,0.8,SF Bay,0.007 (0.007),0.001,0.046
