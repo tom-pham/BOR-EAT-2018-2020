@@ -680,11 +680,10 @@ make.phi.table <- function(phi, standardized = T) {
       SE = round(SE, 2),
       LCI = round(LCI, 2),
       UCI = round(UCI, 2),
-      Estimate = paste0(Estimate, " (", as.character(SE), ")")
+      Estimate2 = paste0(Estimate, " (", as.character(SE), ")")
     ) %>% 
-    rename(!!label := Estimate,
-           'Reach #' = reach_num) %>% 
-    select(-SE)
+    rename(!!label := Estimate2,
+           'Reach #' = reach_num)
 }
 
 plot.p <- function(p) {
@@ -888,7 +887,7 @@ phi <- phi %>%
             by = c("reach_end" = "GEN")) %>% 
   mutate(count = ifelse(is.na(count), 0, count))
 
-region_breaks <- get.region.breaks(phi)
+# region_breaks <- get.region.breaks(phi)
 
 # Plot survival probability
 plot.phi(phi, type = "Reach", add_breaks = F, ylabel = "Survival per 10km",
