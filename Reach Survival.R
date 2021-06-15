@@ -8,7 +8,7 @@
 # and outputs detection probabilities using RMark
 # Data source: Data extracted from NOAA ERDDAP data server (oceanview)
 # Data details: StudyIDs examined: BC-Spring-2018, CNFH_FMR 2019/2020,
-# ColemanLateFall 2018/2019/2020, DeerCk_SH_Wild_2018, DeerCk_Wild_2018
+# ColemanLateFall 2018/2019, DeerCk_SH_Wild_2018, DeerCk_Wild_2018
 # FR_Spring_2019, MillCk_Wild_2018, Mok_Fall_2018, Nimbus_Fall_2018,
 # RBDD_2018, RBDD_WR_2018, SB_Spring 2018/2019, Winter_H 2018/2019/2020
 
@@ -19,11 +19,13 @@ library(rerddap)
 library(lubridate)
 library(clusterPower)
 # library(RColorBrewer)
-# library(cowplot)
+library(cowplot)
 library(RODBC)
 # library(flextable)
 library(leaflet)
 
+
+cache_delete_all()
 
 ### Load TaggedFish and ReceiverDeployments tables through ERDDAP ---------------------------------------------------------------------
 
@@ -76,7 +78,8 @@ get_detections <- function(studyID) {
       TaggedFish %>% 
         select(fish_id, release_river_km, release_latitude, release_longitude, 
                release_location) %>% distinct()
-    )
+    ) %>% 
+    distinct()
   
   # Rename columns and change column types as ERDDAP returns data all in 
   # character format
@@ -101,11 +104,30 @@ get_detections <- function(studyID) {
       RelRKM = as.numeric(RelRKM),
       time = ymd_hms(time),
       GenRKM = ifelse(is.na(GenRKM), RelRKM, GenRKM)
+    ) %>% 
+    as_tibble() # ERDDAP by default returns a table.dap object which does not play nice with
+  # maggittr (pipes) so convert to tibble
+  
+  # Check for duplicate GEN with different GenRKM, if found replace with mean 
+  # GenRKM, GenLat, GenLon
+  dup_GEN <- df %>% 
+    distinct(GEN, GenRKM, GenLat, GenLon) %>% 
+    group_by(GEN) %>% 
+    summarise_at(
+      c("GenRKM", "GenLat", "GenLon"), mean
     )
   
-  # ERDDAP by default returns a table.dap object which does not play nice with
-  # maggittr (pipes) so convert to tibble
-  as_tibble(df)
+  # Replace any duplicated GEN with mean values
+  df <- df %>% 
+    rowwise() %>% 
+    mutate(
+      GenRKM = ifelse(GEN %in% dup_GEN$GEN, dup_GEN$GenRKM[dup_GEN$GEN == GEN], 
+                      GenRKM),
+      GenLat = ifelse(GEN %in% dup_GEN$GEN, dup_GEN$GenLat[dup_GEN$GEN == GEN], 
+                      GenLat),
+      GenLon = ifelse(GEN %in% dup_GEN$GEN, dup_GEN$GenLon[dup_GEN$GEN == GEN], 
+                      GenLon)
+    )
   
 }
 
@@ -376,6 +398,7 @@ get_cum_survival <- function(all.inp, add_release) {
   
 }
 
+
 get.receiver.GEN <- function(all_detections) {
   # Get a list of all receiver sites and metadata for a given detections df
   #
@@ -459,6 +482,7 @@ format.p <- function(output, multiple){
       mutate(
         Reach = paste0(reach_start, " to \n", reach_end),
         RKM = paste0(rkm_start, " to ", rkm_end),
+        reach_num = rep(1:(n()/2), 2)
       ) %>% 
       left_join(
         reach.meta.aggregate %>%
@@ -487,7 +511,7 @@ format_phi <- function(outputs, multiple) {
   if (multiple == F) {
     outputs %>%
       # Grab first half of Mark outputs which represent Phi values
-      slice(1:(nrow(outputs) / 2)) %>%
+      slice(1:(nrow(outputs) / 2) -1) %>%
       select(
         -c("fixed", "note")
       ) %>% 
@@ -575,7 +599,7 @@ get.unique.detects <- function(all_aggregated){
 # }
 
 plot.phi <- function(phi, type, add_breaks, ylabel, xlabel, multiple, 
-                     padding = 5.5) {
+                     padding = 5.5, text_size = 14) {
   # Plot phi outputs from Mark model
   #
   # Arguments:
@@ -593,7 +617,11 @@ plot.phi <- function(phi, type, add_breaks, ylabel, xlabel, multiple,
   #  plot of phi with estimate and error bars representing LCI, UCI
   
   # Create the levels order 
-  lvls <- phi %>% select(type) %>% distinct() %>% pull()
+  lvls <- phi %>% 
+    filter(reach_end != "GoldenGateW") %>% 
+    select(type) %>% 
+    distinct() %>% 
+    pull()
   
   # # Unfortunately, this method of variable assignment doesn't work when I have
   # # Multiple studyIDs, something to do with recycling rules in mutate()
@@ -608,10 +636,12 @@ plot.phi <- function(phi, type, add_breaks, ylabel, xlabel, multiple,
   
   # Does same thing as above in base R
   p <- phi
-  p[type] <- factor(rep(lvls, length(studyIDs)), levels = lvls)
   p <- p %>% 
     # Filter out the GGE to GGW estimate, not really useful
     filter(reach_end != "GoldenGateW")
+  
+  p[type] <- factor(rep(lvls, length(studyIDs)), levels = lvls)
+  
 
   if (type == "Reach") {
     # If plotting for Reach survival set angle of xaxis to be 45 degrees because
@@ -640,7 +670,8 @@ plot.phi <- function(phi, type, add_breaks, ylabel, xlabel, multiple,
         panel.border = element_rect(colour = "black", fill=NA, size=.75),
         axis.text.x = element_text(angle = angle, hjust = hjust),
         plot.margin = margin(5.5, 5.5, 5.5, padding, "pt"),
-        legend.position = c(.12 ,.9)
+        legend.position = "bottom",
+        text = element_text(size=text_size)
       )
       
   }  else {
@@ -655,7 +686,8 @@ plot.phi <- function(phi, type, add_breaks, ylabel, xlabel, multiple,
       theme_classic() +
       theme(
         panel.border = element_rect(colour = "black", fill=NA, size=.75),
-        axis.text.x = element_text(angle = angle, hjust = hjust)
+        axis.text.x = element_text(angle = angle, hjust = hjust),
+        text = element_text(size=text_size)
       )
   }
 }
@@ -673,7 +705,7 @@ make.phi.table <- function(phi, standardized = T) {
   
   phi %>% 
     select(StudyID, reach_num, Reach, RKM, Region, Estimate = estimate, SE = se, 
-           LCI = lcl, UCI = ucl, N= count) %>% 
+           LCI = lcl, UCI = ucl) %>% 
     mutate(
       Reach = str_remove_all(Reach, "\n"),
       Estimate = round(Estimate, 2),
@@ -686,28 +718,115 @@ make.phi.table <- function(phi, standardized = T) {
            'Reach #' = reach_num)
 }
 
-plot.p <- function(p) {
+plot.phi2 <- function(phi, type, add_breaks, ylabel, xlabel, multiple, 
+                     padding = 5.5, text_size = 16) {
+  # Plot phi outputs from Mark model
+  #
+  # Arguments:
+  #  phi: phi outputs from Mark model, must be formatted with (format_phi) first
+  #  type: "Reach" or "Region", dictates how the plot will be created
+  #  add_breaks: TRUE/FALSE whether to add vertical line breaks to represent
+  #     regions
+  #  ylabel: label for y axis
+  #  xlabel: label for x axis
+  #  multiple: TRUE/FALSE, whether there are multiple studyIDs or not
+  #  padding: leftside plot margin, default set to 5.5 good for most, but can
+  #     be adjusted of the xaxis label too long and gets cut off
+  #
+  # Return:
+  #  plot of phi with estimate and error bars representing LCI, UCI
+  
+
+    phi <- phi %>% 
+    # Filter out the GGE to GGW estimate, not really useful
+    filter(reach_end != "GoldenGateW")
+  
+  if (multiple == T) {
+    ggplot(data = phi, mapping = aes(x = reach_num, y = estimate, group = StudyID)) +
+      geom_point(aes(color = StudyID), position = position_dodge(.5)) +
+      geom_errorbar(mapping = aes(x = reach_num, ymin = lcl, ymax = ucl, 
+                                  color = StudyID),  width = .1,
+                    position = position_dodge(.5)) +
+      # Conditionally add breaks 
+      {if(add_breaks)geom_vline(xintercept = region_breaks, linetype = "dotted")} +
+      ylab(ylabel) +
+      xlab(xlabel) +
+      ## WILL NEED TO FIX THIS, ONLY WORKS FOR 2 STUDYIDS
+      scale_color_manual(values=c("#007EFF", "#FF8100")) +
+      scale_x_continuous(breaks = 1:max(phi$reach_num)) +
+      theme_classic() +
+      theme(
+        panel.border = element_rect(colour = "black", fill=NA, size=.75),
+        plot.margin = margin(5.5, 5.5, 5.5, padding, "pt"),
+        legend.position = "bottom",
+        text = element_text(size=text_size)
+      )
+    
+  }  else {
+    ggplot(data = phi, mapping = aes(x = reach_num, y = estimate)) +
+      geom_point() +
+      geom_errorbar(mapping = aes(x= reach_num, ymin = lcl, ymax = ucl), 
+                    width = .1) +
+      # Conditionally add breaks 
+      {if(add_breaks)geom_vline(xintercept = region_breaks, linetype = "dotted")} +
+      ylab(ylabel) +
+      xlab(xlabel) +
+      scale_x_continuous(breaks = 1:max(phi$reach_num)) +
+      theme_classic() +
+      theme(
+        panel.border = element_rect(colour = "black", fill=NA, size=.75),
+        text = element_text(size=text_size)
+      )
+  }
+}
+
+plot.p <- function(p, multiple) {
   # Plot p outputs from Mark model
   #
   # Arguments:
   #  p: p outputs from Mark model, must be formatted with (format.p) first
+  #  multiple: T if multiple studyIDs, F is single
   #
   # Return:
   #  plot of p with estimate and error bars representing LCI, UCI
-  p %>% 
-    mutate(
-      Reach = factor(reach_num, levels = p$reach_num)
-    ) %>% 
-    ggplot(mapping = aes(x = reach_num, y = estimate)) +
-    geom_point() +
-    geom_errorbar(mapping = aes(ymin = lcl, ymax = ucl)) +
-    ylab("Detection probability") +
-    xlab("Reach") +
-    scale_x_continuous(breaks = p$reach_num) +
-    theme_classic() +
-    theme(
-      panel.border = element_rect(colour = "black", fill=NA, size=.75),
-    )
+  if (multiple == F) {
+    p %>% 
+      mutate(
+        Reach = factor(reach_num, levels = p$reach_num)
+      ) %>% 
+      ggplot(mapping = aes(x = reach_num, y = estimate)) +
+      geom_point() +
+      geom_errorbar(mapping = aes(ymin = lcl, ymax = ucl)) +
+      ylab("Detection probability") +
+      xlab("Reach") +
+      scale_x_continuous(breaks = p$reach_num) +
+      theme_classic() +
+      theme(
+        panel.border = element_rect(colour = "black", fill=NA, size=.75),
+      )
+  } else { # If multiple studyIDs
+    
+    # Create the levels order 
+    lvls <- p %>% select(reach_num) %>% distinct() %>% pull()
+    
+    p %>% 
+      mutate(
+        Reach = factor(reach_num, levels = lvls)
+      ) %>% 
+      ggplot(mapping = aes(x = reach_num, y = estimate, group = StudyID)) +
+      geom_point(aes(color = StudyID), position = position_dodge(.6)) +
+      geom_errorbar(mapping = aes(x = reach_num, ymin = lcl, ymax = ucl, 
+                                  color = StudyID),  width = .1,
+                    position = position_dodge(.6)) +      
+      ylab("Detection probability") +
+      xlab("Reach") +
+      scale_x_continuous(breaks = lvls) +
+      theme_classic() +
+      theme(
+        panel.border = element_rect(colour = "black", fill=NA, size=.75),
+      )
+  }
+
 }
 
 format.cum.surv <- function(cum_survival_all) {
@@ -738,11 +857,12 @@ format.cum.surv <- function(cum_survival_all) {
       'Reach #' = reach_num
     ) %>% filter(
       GEN != "GoldenGateW"
-    )
-
+    ) 
+    
 }
 
-plot.cum.surv <- function(cum_survival_all, add_breaks, multiple, padding = 5.5) {
+plot.cum.surv <- function(cum_survival_all, add_breaks, multiple, padding = 5.5,
+                          text_size = 14) {
   # Plot cumulative survival outputs from Mark model
   #
   # Arguments:
@@ -759,52 +879,1275 @@ plot.cum.surv <- function(cum_survival_all, add_breaks, multiple, padding = 5.5)
   
   if (multiple) {
     cum_survival_all %>% 
-      mutate(
-        GEN = factor(GEN, levels = reach.meta.aggregate$GEN,
-                     labels = paste0(reach.meta.aggregate$GEN, " (", 
-                                     reach.meta.aggregate$GenRKM, ")"))
-      ) %>% 
-      ggplot(mapping = aes(x = GEN, y = cum.phi, group = StudyID)) +
+      # mutate(
+      #   GEN = factor(GEN, levels = reach.meta.aggregate$GEN,
+      #                labels = paste0(reach.meta.aggregate$GEN, " (", 
+      #                                reach.meta.aggregate$GenRKM, ")"))
+      # ) %>% 
+      ggplot(mapping = aes(x = reach_num, y = cum.phi, group = StudyID)) +
       geom_point(size = 2, aes(color = StudyID)) +
-      geom_errorbar(mapping = aes(x= GEN, ymin = LCI, ymax = UCI, 
+      geom_errorbar(mapping = aes(x= reach_num, ymin = LCI, ymax = UCI, 
                                   color = StudyID),  width = .1) +
       geom_line(size = 0.7, aes(color = StudyID)) +
       {if(add_breaks)geom_vline(xintercept = region_breaks, linetype = "dotted")} +
       ylab("Cumulative survival") +
-      xlab("Site (River KM)") +
+      xlab("Reach") +
       scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+      scale_x_continuous(breaks = 0:max(cum_survival_all$reach_num)) +
       # NEEDS TO BE FIXED FOR IF THERE ARE MORE THEN 2 STUDYIDS
       scale_color_manual(values=c("#007EFF", "#FF8100")) +
       theme_classic() +
       theme(
         panel.border = element_rect(colour = "black", fill=NA, size=.5),
-        axis.text.x = element_text(angle = 45, hjust = 1),
+        # axis.text.x = element_text(angle = 45, hjust = 1),
         plot.margin = margin(5.5, 5.5, 5.5, padding, "pt"),
-        legend.position = c(.1 ,.12)
+        legend.position = "bottom",
+        text = element_text(size=text_size)
       ) 
   } else {
     cum_survival_all %>% 
-      mutate(
-        GEN = factor(GEN, levels = reach.meta.aggregate$GEN,
-                     labels = paste0(reach.meta.aggregate$GEN, " (", 
-                                     reach.meta.aggregate$GenRKM, ")"))
-      ) %>% 
-      ggplot(mapping = aes(x = GEN, y = cum.phi)) +
+      # mutate(
+      #   GEN = factor(GEN, levels = reach.meta.aggregate$GEN,
+      #                labels = paste0(reach.meta.aggregate$GEN, " (", 
+      #                                reach.meta.aggregate$GenRKM, ")"))
+      # ) %>% 
+      ggplot(mapping = aes(x = reach_num, y = cum.phi)) +
       geom_point(size = 2) +
-      geom_errorbar(mapping = aes(x= GEN, ymin = LCI, ymax = UCI),  width = .1) +
+      geom_errorbar(mapping = aes(x= reach_num, ymin = LCI, ymax = UCI),  width = .1) +
       geom_line(size = 0.7, group = 1) +
       {if(add_breaks)geom_vline(xintercept = region_breaks, linetype = "dotted")} +
       ylab("Cumulative survival") +
-      xlab("Site (River KM)") +
+      xlab("Reach") +
       scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+      scale_x_continuous(breaks = 0:max(cum_survival_all$reach_num)) +
       theme_classic() +
       theme(
         panel.border = element_rect(colour = "black", fill=NA, size=.5),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.margin=unit(c(.5,.5,.5,1), "cm"),
+        # axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin=unit(c(.5,.5,.5,.5), "cm"),
+        text = element_text(size=text_size)
       ) 
   }
 }
+
+#### Create INP for ColemanLateFall 2018/2019  -----------------------------------
+
+# Build the key/pair for GEN replacement
+replace_dict <- list(replace_with = list(c()),
+                     replace_list = list(c()))
+
+studyIDs <- c("ColemanLateFall_2018", "ColemanLateFall_2019")
+
+# Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+
+# Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/ColemanLateFall_2018_19/",
+                                             x, ".csv"))
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
+
+# Get list of all receiver GEN
+reach.meta <- get.receiver.GEN(all_detections)
+
+# B/c two studyID find only common sites between them
+common_sites <- all_detections %>% 
+  bind_rows() %>% 
+  select(StudyID, GEN, GenRKM) %>% 
+  distinct() %>% 
+  select(GEN, GenRKM) %>% 
+  group_by(GEN) %>% 
+  filter(n()>1) %>% 
+  distinct()
+
+# Adjust sites, remove site above release, and Delta sites except Chipps
+reach.meta <- reach.meta %>%
+  filter(
+    GEN != "LSNFH",
+    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
+      GEN %in% c("ChippsE", "ChippsW"),
+    # Choose only common sites OR release sites
+    GEN %in% common_sites$GEN 
+  )
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>%
+  bind_rows()
+
+#### ColemanLateFall 2018/2019 Detection probability ---------------------------------------------------
+outputs <- get.mark.model(all.inp, multiple = T, standardized = F)
+
+p <- format.p(outputs, multiple = T)
+
+# Add in counts to p
+unique_detects <- get.unique.detects(all_aggregated)
+p <- p %>%
+  left_join(unique_detects %>%
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>%
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>%
+  left_join(unique_detects %>%
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>%
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+# Identify receivers that had poor detection efficiencies
+# bad_rec <- p %>% 
+#   filter(estimate < 0.7) %>% 
+#   filter(!(reach_end %in% c("GoldenGateE", "GoldenGateW", "BeniciaE", 
+#                             "BeniciaW")))
+
+# Compare estimates for each studyID
+df <- p %>% 
+  select(-c("se", "reach_num", "Reach", "RKM", "Region", "lcl", "ucl")) %>% 
+  pivot_wider(names_from = StudyID, values_from = c("estimate", "count_start", "count_end"),
+              names_glue = "{StudyID} {.value}")
+
+prefixes <- unique(p$StudyID)
+
+names_to_order <- map(prefixes, ~ names(df)[grep(paste0(.x, " "), names(df))]) %>% unlist
+names_id <- setdiff(names(df), names_to_order)
+
+df <- df %>%
+  select(names_id, names_to_order)
+
+# Plot detection probability
+# plot.p(p, multiple = T)
+# ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Detection Probability.png", 
+#         width = 14, height = 6, dpi = 500)
+
+# Manually select sites to use
+reach.meta <- reach.meta %>% 
+  filter(
+    GEN %in% c("BattleCk_CNFH_Rel", "BattleCk3", "Abv_Altube2", "Mill_Ck_Conf", 
+               "Abv_WoodsonBr", "Blw_IrvineFinch", "BlwOrd", "ButteBr", 
+               "Colusa AC2", "Colusa BC4", "Blw_Knights_GS3", 
+               "Blw_Elkhorn_GS1", "TowerBridge","Hood",  "ChippsE", "ChippsW", "BeniciaE", 
+               "BeniciaW", "GoldenGateE", "GoldenGateW")
+  )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+outputs <- get.mark.model(all.inp, multiple = T, standardized = F)
+
+p <- format.p(outputs, multiple = T)
+
+# Add in counts to p
+unique_detects <- get.unique.detects(all_aggregated)
+p <- p %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+plot.p(p, multiple = T)
+
+
+#### ColemanLateFall_2018 2019 Reach survival per 10km ----------------------------------------------------------------
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+write_csv(reach.meta.aggregate, "./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018_19_Sites.csv")
+
+# Get river KM
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp, standardized = T, multiple = T)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = T)
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+
+# Manually change regions
+phi <- phi %>% 
+  mutate(
+    Region = if_else(Region == "West Delta", "Delta",
+                     if_else(Region == "Carquinez Strait", "Bay",
+                             if_else(Region == "SF Bay", "Bay", Region)))
+  )
+
+region_breaks <- c(1.5, 7.5, 14.5, 15.5)
+
+plot.phi2(phi, type = "Reach", add_breaks = T, ylabel = "Survival per 10km", 
+         xlabel = "Reach", multiple = T, text_size = 14)
+
+ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Reach Survival per10km.png", width = 10, height = 6, dpi = 500)
+
+
+phi_table <- phi %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, reach_num, 'Count start' = count_start, "Count end" = count_end) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
+  ) %>% 
+  rename('Survival rate per 10km (SE)' = Estimate) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Reach Survival per10km.csv")
+
+#### ColemanLateFall_2018 2019 Cumulative Survival By Year----------------------------------------------------------------
+
+cum_survival_2018 <- get_cum_survival((all.inp %>% 
+                                         filter(StudyID == "ColemanLateFall_2018")), T)
+cum_survival_2019 <- get_cum_survival((all.inp %>% 
+                                         filter(StudyID == "ColemanLateFall_2019")), T)
+cum_survival_all <- bind_rows(cum_survival_2018, cum_survival_2019)
+
+cleanup(ask = FALSE)
+
+cum_survival_all <- cum_survival_all %>% 
+  add_column(
+    GEN = rep(reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN))], length(studyIDs)),
+    GenRKM = rep(reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM))], length(studyIDs)),
+    reach_num = rep(seq(0, (nrow(reach.meta.aggregate)-1), 1), length(studyIDs))
+  ) %>% 
+  left_join(
+    reach.meta.aggregate %>%
+      select(GEN, Region) %>% 
+      distinct()
+  ) %>% 
+  mutate_at(
+    vars("cum.phi", "cum.phi.se", "LCI", 'UCI'), round, digits= 2
+  ) %>% 
+  mutate(
+    Region = case_when(
+      GEN == "Blw_Paynes_Ck" ~ "Upper Sac R",
+      GEN == "ButteBr" ~ "Upper Sac R",
+      GEN == "Chipps" ~ "Lower Sac R",
+      GEN %in% c("Benicia", "GoldenGateE", "GoldenGateW") ~ "Bay",
+      TRUE ~ Region
+    ),
+    Region = factor(Region, levels = c("Battle Ck", "Upper Sac R", "Lower Sac R", "Delta", "Bay")),
+    'Survival estimate (SE)' = paste0(cum.phi," (",  cum.phi.se, ")")
+  ) %>% 
+  filter(
+    GEN != "GoldenGateW"
+  )
+
+region_breaks <- c(2.5, 7.5, 13.5, 14.5)
+
+# plot.cum.surv(cum_survival_all, add_breaks = T, multiple = T)
+
+# Plot
+cum_survival_all %>% 
+  filter(GEN != "GoldenGateW") %>% 
+  ggplot(mapping = aes(x = reach_num, y = cum.phi, group = StudyID)) +
+  geom_point(size = 2, aes(color = StudyID)) +
+  geom_errorbar(mapping = aes(x= reach_num, ymin = LCI, ymax = UCI, color = StudyID),  width = .1) +
+  geom_line(size = 0.7, aes(color = StudyID)) +
+  ylab("Cumulative survival") +
+  xlab("Reach") +
+  geom_vline(xintercept = region_breaks, linetype = "dotted") +
+  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(n.breaks = max(cum_survival_all$reach_num)) +
+  scale_color_manual(values=c("#007EFF", "#FF8100")) +
+  theme_classic() +
+  theme(
+    panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    plot.margin=unit(c(.5,.5,.5,.5), "cm"),
+    legend.position = "bottom",
+    text = element_text(size=16),
+  ) 
+
+
+ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Cumulative Survival.png", width = 10, height = 6, dpi = 500)
+
+
+cum_survival_all <- cum_survival_all %>% 
+  select(StudyID, 'Reach #' = reach_num, GEN, GenRKM, Region, 'Survival estimate (SE)', 
+         LCI, UCI)
+
+write_csv(cum_survival_all, "./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Cumulative Survival.csv")
+
+
+#### ColemanLateFall_2018 2019 Region Survival per 10km-------------------------------
+
+reach.meta <- reach.meta %>% 
+  filter(
+    GEN %in% c("BattleCk_CNFH_Rel", "ButteBr", "Hood", "ChippsE", "ChippsW",
+               "GoldenGateE", "GoldenGateW")
+  )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+# Get river KM
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp, standardized = T, multiple = T)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = T)
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+
+# Manually change regions
+phi$Region <- rep(c("Upper Sacramento", "Lower Sacramento", "Delta", "Bay", "Bay"), 2)
+region_breaks <- c(1.5, 2.5, 3.5)
+
+plot.phi(phi, type = "Region", add_breaks = T, ylabel = "Survival per 10km", 
+         xlabel = "Region", multiple = T, text_size = 16)
+
+ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Region Survival per10km.png", width = 10, height = 6, dpi = 500)
+
+
+phi_table <- phi %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, 'Reach #' = reach_num) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
+  ) %>% 
+  rename('Survival rate per 10km (SE)' = Estimate) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Region Survival per10km.csv")
+
+
+#### ColemanLateFall_2018 2019 Region Survival-------------------------------
+
+reach.meta <- reach.meta %>% 
+  filter(
+    GEN %in% c("BattleCk_CNFH_Rel", "ButteBr", "Hood", "ChippsE", "ChippsW",
+               "GoldenGateE", "GoldenGateW")
+  )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+outputs <- get.mark.model(all.inp, standardized = F, multiple = T)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = T)
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+
+# Manually change regions
+phi$Region <- rep(c("Upper Sacramento", "Lower Sacramento", "Delta", "Bay", "Bay"), 2)
+region_breaks <- c(1.5, 2.5, 3.5)
+
+plot.phi(phi, type = "Region", add_breaks = T, ylabel = "Survival", 
+         xlabel = "Region", multiple = T, text_size = 16)
+
+ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Region Survival.png", width = 10, height = 6, dpi = 500)
+
+
+phi_table <- phi %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, 'Reach #' = reach_num) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
+  ) %>% 
+  rename('Survival rate (SE)' = Estimate) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Region Survival.csv")
+
+
+
+##### Create INP for RBDD_WR_2018 -----------------------------------
+name <- "RBDD_WR_2018"
+
+# Build the key/pair for GEN replacement
+replace_dict <- list(replace_with = list(c()),
+                     replace_list = list(c()))
+
+studyIDs <- c("RBDD_WR_2018")
+
+# Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+
+# Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/RBDD_WR_2018/",
+                                             x, ".csv"))
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
+
+# Get list of all receiver GEN
+reach.meta <- get.receiver.GEN(all_detections)
+
+reach.meta <- reach.meta %>% 
+  filter(
+    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
+      GEN %in% c("ChippsE", "ChippsW"),
+    GEN != "I80-50_Br" # Only 1 fish, looks like false detect
+  )
+
+leaflet(data = reach.meta) %>% addTiles() %>%
+  addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
+             label = ~as.character(GEN),
+             labelOptions = labelOptions(noHide = T, textOnly = TRUE))
+
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+all_EH <- lapply(all_aggregated, make_EH)
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+#### RBDD_WR_2018 Detection probability ---------------------------------------------------
+outputs <- get.mark.model(all.inp, F, multiple = F)
+cleanup(ask = FALSE)
+
+p <- format.p(outputs, multiple = F)
+
+# Plot detection probability
+plot.p(p)
+
+# Identify and remove sites with low p <0.7
+reach.meta <- reach.meta %>% 
+  filter(
+    !(GEN %in% c("Abv_FremontWeir", "Blw_FremontWeir"))
+  )
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+all_EH <- lapply(all_aggregated, make_EH)
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+# Then rerun 
+outputs <- get.mark.model(all.inp, F)
+cleanup(ask = FALSE)
+
+p <- format.p(outputs)
+
+# Plot detection probability
+plot.p(p)
+
+dir.create(paste0("./Outputs/", name), showWarnings = FALSE)  
+write_csv(p, paste0(paste0("./Outputs/", name, "/", name, 
+                           " detection probability.csv")))
+
+#### RBDD_WR_2018 Reach survival per 10km ----------------------------------------------------------------
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("SacTrawl"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("SacTrawl1", "SacTrawl2"),
+                                         c("BeniciaE", "BeniciaW")))
+
+reach.meta <- reach.meta %>%
+  filter(
+    GEN %in% c("RBDD_Rel", "Blw_Salt", "Mill_Ck_Conf",
+               "Abv_WoodsonBr", "GCID_abv", "Blw_IrvineFinch", "BlwOrd")
+  ) 
+
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+all_EH <- lapply(all_aggregated, make_EH)
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+leaflet(data = reach.meta.aggregate) %>% addTiles() %>%
+  addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
+             label = ~as.character(GEN),
+             labelOptions = labelOptions(noHide = T, textOnly = TRUE))
+
+KM <- reach.meta.aggregate$GenRKM
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp, standardized = T, multiple = F)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = F)
+
+# Identify number of fish detected at each GEN, use that to filter out estimates for fish 
+# no longer seen
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+
+# Plot survival probability
+plot.phi(phi, type = "Reach", add_breaks = F, ylabel = "Survival rate per 10km",
+         xlabel = "Reach", multiple = F)
+
+ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
+       width = 10, height = 6, dpi = 500)
+
+phi_table <- make.phi.table(phi)
+write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name, 
+                                   " Reach Survival per10km.csv")))
+
+#### RBDD_WR_2018 Cumulative Survival By Year----------------------------------------------------------------
+cum_survival_2018 <- get_cum_survival((all.inp), add_release = T)
+cum_survival_2018
+
+cum_survival_all <- bind_rows(cum_survival_2018)
+
+cum_survival_all <- format.cum.surv(cum_survival_all)
+
+# Plot
+plot.cum.surv(cum_survival_all, add_breaks = F)
+
+ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
+       width = 10, height = 6, dpi = 500)
+
+cum_survival_all <- cum_survival_all %>% 
+  select(
+    'Reach #', GEN, RKM, Region, 'Survival estimate (SE)', LCI, UCI
+  )
+
+write_csv(cum_survival_all, paste0(paste0("./Outputs/", name, "/", name, 
+                                          " Cumulative Survival.csv")))
+
+
+#### Create INP for Winter_H 2018/2019  -----------------------------------
+
+# Build the key/pair for GEN replacement
+replace_dict <- list(replace_with = list(c()),
+                     replace_list = list(c()))
+
+studyIDs <- c("Winter_H_2018", "Winter_H_2019")
+
+# # Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+# 
+# # Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/Winter_H_2018_2019/",
+                                             x, ".csv"))
+# 
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
+
+# Get list of all receiver GEN
+reach.meta <- get.receiver.GEN(all_detections)
+
+# B/c two studyID find only common sites between them
+common_sites <- all_detections %>% 
+  bind_rows() %>% 
+  select(StudyID, GEN, GenRKM) %>% 
+  distinct() %>% 
+  select(GEN, GenRKM) %>% 
+  group_by(GEN) %>% 
+  filter(n()>1) %>% 
+  distinct()
+
+# Adjust sites, remove site above release, and Delta sites except Chipps
+reach.meta <- reach.meta %>%
+  filter(
+    GEN != "LSNFH",
+    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
+      GEN %in% c("ChippsE", "ChippsW"),
+    # Choose only common sites OR release sites
+    GEN %in% common_sites$GEN | GEN %in% c("Caldwell_Park_Rel", "Bonnyview_Rel")
+  )
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>%
+  bind_rows()
+
+
+#### Winter_H 2018/2019 Detection probability ---------------------------------------------------
+outputs <- get.mark.model(all.inp, multiple = T, standardized = F)
+
+p <- format.p(outputs, multiple = T)
+
+# Add in counts to p
+unique_detects <- get.unique.detects(all_aggregated)
+p <- p %>%
+  left_join(unique_detects %>%
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>%
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>%
+  left_join(unique_detects %>%
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>%
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+# Identify receivers that had poor detection efficiencies
+bad_rec <- p %>%
+  filter(estimate < 0.7) %>%
+  filter(!(reach_end %in% c("GoldenGateE", "GoldenGateW", "BeniciaE",
+                            "BeniciaW")))
+
+# Compare estimates for each studyID
+df <- p %>% 
+  select(-c("se", "reach_num", "Reach", "RKM", "Region", "lcl", "ucl")) %>% 
+  pivot_wider(names_from = StudyID, values_from = c("estimate", "count_start", "count_end"),
+              names_glue = "{StudyID} {.value}")
+
+prefixes <- unique(p$StudyID)
+
+names_to_order <- map(prefixes, ~ names(df)[grep(paste0(.x, " "), names(df))]) %>% unlist
+names_id <- setdiff(names(df), names_to_order)
+
+df <- df %>%
+  select(names_id, names_to_order)
+
+
+# Plot detection probability
+# plot.p(p, multiple = T)
+# ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Detection Probability.png",
+#         width = 14, height = 6, dpi = 500)
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+outputs <- get.mark.model(all.inp, multiple = T, standardized = F)
+
+p <- format.p(outputs, multiple = T)
+
+# Add in counts to p
+unique_detects <- get.unique.detects(all_aggregated)
+p <- p %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+plot.p(p, multiple = T)
+
+
+#### Winter_H 2018/2019 Reach survival per 10km ----------------------------------------------------------------
+
+# Manually select sites to use
+reach.meta <- reach.meta %>% 
+  filter(
+    GEN %in% c("Caldwell_Park_Rel", "Bonnyview_Rel", "Blw_ClearCr", "BlwCowCr", 
+               "Blw_Paynes_Ck", "Blw_Salt", "GCID_abv", "Colusa AC3", "Colusa AC2",
+               "AbvTisdale","BlwTisdale",  "BlwChinaBend", "Knights_RST", 
+               "ChippsE", "ChippsW", "BeniciaE", "BeniciaW", "GoldenGateE", 
+               "GoldenGateW"
+    )
+  )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+# Must run survival analyses seperately because of two different release locations
+# with no common site at second release loc
+reach.meta2 <- reach.meta
+
+reach.meta <- reach.meta2 %>% filter(GEN != "Caldwell_Park_Rel")
+all_aggregated_18 <- lapply(list(all_detections[[1]]), aggregate_GEN)
+all_EH_18 <- lapply(all_aggregated_18, make_EH)
+all.inp_18 <- pmap(list(list(all_detections[[1]]),all_EH_18), create_inp) %>% 
+  bind_rows()
+
+write_csv(reach.meta.aggregate %>% 
+            add_row(reach.meta2[1,]) %>% 
+            arrange(desc(GenRKM)),
+          "./outputs/Winter_H_2018_2019/Winter_H_2018_2019_sites.csv")
+
+# Reach survival for 2018
+# Get river KM
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp_18, standardized = T, multiple = F)
+cleanup(ask = F)
+
+studyIDs <- "Winter_H_2018"
+phi_18 <- format_phi(outputs, multiple = F)
+
+# Cumulative survival for 2018
+cum_survival_2018 <- get_cum_survival(all.inp_18, add_release = T)
+
+cum_survival_2018 <- bind_rows(cum_survival_2018)
+
+# Must run survival analyses seperately because of two different release locations
+# with no common site at second release loc
+reach.meta <- reach.meta2 %>% filter(GEN != "Bonnyview_Rel")
+all_aggregated_19 <- lapply(list(all_detections[[2]]), aggregate_GEN)
+all_EH_19 <- lapply(all_aggregated_19, make_EH)
+all.inp_19 <- pmap(list(list(all_detections[[2]]),all_EH_19), create_inp) %>% 
+  bind_rows()
+
+# Reach survival for 2019
+# Get river KM
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp_19, standardized = T, multiple = F)
+cleanup(ask = F)
+
+studyIDs <- "Winter_H_2019"
+phi_19 <- format_phi(outputs, multiple = F)
+
+# Cumulative survival for 2019
+cum_survival_2019 <- get_cum_survival(all.inp_19, add_release = T)
+
+cum_survival_2019 <- bind_rows(cum_survival_2019)
+
+cleanup(ask = FALSE)
+
+### Now combine reach surv 
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi_18 <- phi_18 %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+phi_19 <- phi_19 %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+phi_combined <- bind_rows(phi_18, phi_19) %>% 
+  mutate(
+    reach_start = gsub("Bonnyview_Rel", "Release", reach_start),
+    reach_start = gsub("Caldwell_Park_Rel", "Release", reach_start),
+    Reach = gsub("Bonnyview_Rel", "Release", Reach),
+    Reach = gsub("Caldwell_Park_Rel", "Release", Reach),
+    RKM = gsub("540.25", "551.28/540.25", RKM)
+  )
+
+
+# Manually change regions
+phi_combined <- phi_combined %>% 
+  mutate(
+    Region = if_else(Region == "West Delta", "Delta",
+                     if_else(Region == "Carquinez Strait", "Bay",
+                             if_else(Region == "SF Bay", "Bay", Region)))
+  )
+
+region_breaks <- c(6.5, 12.5, 13.5)
+
+plot.phi2(phi_combined, type = "Reach", add_breaks = T, ylabel = "Survival per 10km", 
+         xlabel = "Reach", multiple = T)
+
+ggsave2("./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Reach Survival per10km.png", width = 10, height = 6, dpi = 500)
+
+
+phi_table <- phi_combined %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, reach_num, 'Count start' = count_start, "Count end" = count_end) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
+  ) %>% 
+  rename('Survival rate per 10km (SE)' = Estimate) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Reach Survival per10km.csv")
+
+### Now combine cumulative survival
+cum_survival_all <- bind_rows(cum_survival_2018, cum_survival_2019)
+
+cleanup(ask = FALSE)
+
+studyIDs <- c("Winter_H_2018", "Winter_H_2019")
+
+cum_survival_all <- cum_survival_all %>% 
+  add_column(
+    GEN = rep(reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN))], length(studyIDs)),
+    GenRKM = rep(reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM))], length(studyIDs)),
+    reach_num = rep(seq(1, (nrow(reach.meta.aggregate)), 1), length(studyIDs))
+  ) %>% 
+  left_join(
+    reach.meta.aggregate %>%
+      select(GEN, Region) %>% 
+      distinct()
+  ) %>% 
+  mutate_at(
+    vars("cum.phi", "cum.phi.se", "LCI", 'UCI'), round, digits= 2
+  ) %>% 
+  mutate(
+    Region = case_when(
+      GEN == "Blw_Paynes_Ck" ~ "Upper Sac R",
+      GEN == "ButteBr" ~ "Upper Sac R",
+      GEN == "Chipps" ~ "Lower Sac R",
+      GEN %in% c("Benicia", "GoldenGateE", "GoldenGateW") ~ "Bay",
+      TRUE ~ Region
+    ),
+    Region = factor(Region, levels = c("Battle Ck", "Upper Sac R", "Lower Sac R", 
+                                       "Delta", "Bay")),
+    'Survival estimate (SE)' = paste0(cum.phi," (",  cum.phi.se, ")"),
+    GEN = ifelse(StudyID == "Winter_H_2019" & reach_num == 1, 
+                 "Caldwell_Park_Rel", GEN),
+    reach_num = reach_num - 1
+  ) %>% 
+  filter(
+    GEN != "GoldenGateW"
+  )
+
+region_breaks <- c(6.5, 11.5, 12.5)
+
+# plot.cum.surv(cum_survival_all, add_breaks = T, multiple = T)
+
+# Plot
+cum_survival_all %>% 
+  filter(GEN != "GoldenGateW") %>% 
+  ggplot(mapping = aes(x = reach_num, y = cum.phi, group = StudyID)) +
+  geom_point(size = 2, aes(color = StudyID)) +
+  geom_errorbar(mapping = aes(x= reach_num, ymin = LCI, ymax = UCI, color = StudyID),  width = .1) +
+  geom_line(size = 0.7, aes(color = StudyID)) +
+  ylab("Cumulative survival") +
+  xlab("Reach") +
+  geom_vline(xintercept = region_breaks, linetype = "dotted") +
+  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(n.breaks = max(cum_survival_all$reach_num)) +
+  scale_color_manual(values=c("#007EFF", "#FF8100")) +
+  theme_classic() +
+  theme(
+    panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.position = "bottom",
+    text = element_text(size=16)
+  ) 
+
+ggsave2("./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Cumulative Survival.png", width = 10, height = 6, dpi = 500)
+
+
+cum_survival_all <- cum_survival_all %>% 
+  select(StudyID, 'Reach #' = reach_num, GEN, GenRKM, Region, 'Survival estimate (SE)', 
+         LCI, UCI)
+
+write_csv(cum_survival_all, "./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Cumulative Survival.csv")
+
+#### Regional survival per 10km
+
+# 2018
+reach.meta <- reach.meta2 %>% 
+  filter(GEN %in% c("Bonnyview_Rel", "Colusa AC3", "Knights_RST", "ChippsE",
+                    "ChippsW", "GoldenGateE", "GoldenGateW"))
+all_aggregated_18 <- lapply(list(all_detections[[1]]), aggregate_GEN)
+all_EH_18 <- lapply(all_aggregated_18, make_EH)
+all.inp_18 <- pmap(list(list(all_detections[[1]]),all_EH_18), create_inp) %>% 
+  bind_rows()
+
+# Reach survival for 2018
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp_18, standardized = T, multiple = F)
+cleanup(ask = F)
+
+studyIDs <- "Winter_H_2018"
+phi_18 <- format_phi(outputs, multiple = F)
+
+# 2019
+reach.meta <- reach.meta2 %>% 
+  filter(GEN %in% c("Caldwell_Park_Rel", "Colusa AC3", "Knights_RST", "ChippsE",
+                    "ChippsW", "GoldenGateE", "GoldenGateW"))
+all_aggregated_19 <- lapply(list(all_detections[[2]]), aggregate_GEN)
+all_EH_19 <- lapply(all_aggregated_19, make_EH)
+all.inp_19 <- pmap(list(list(all_detections[[2]]),all_EH_19), create_inp) %>% 
+  bind_rows()
+
+# Reach survival for 2018
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp_19, standardized = T, multiple = F)
+cleanup(ask = F)
+
+studyIDs <- "Winter_H_2019"
+phi_19 <- format_phi(outputs, multiple = F)
+
+phi_combined <- bind_rows(phi_18, phi_19) %>% 
+  mutate(
+    reach_start = gsub("Bonnyview_Rel", "Release", reach_start),
+    reach_start = gsub("Caldwell_Park_Rel", "Release", reach_start),
+    Reach = gsub("Bonnyview_Rel", "Release", Reach),
+    Reach = gsub("Caldwell_Park_Rel", "Release", Reach),
+    RKM = gsub("540.25", "551.28/540.25", RKM)
+  )
+
+phi_combined <- bind_rows(phi_18, phi_19) %>% 
+  mutate(
+    reach_start = gsub("Bonnyview_Rel", "Release", reach_start),
+    reach_start = gsub("Caldwell_Park_Rel", "Release", reach_start),
+    Reach = gsub("Bonnyview_Rel", "Release", Reach),
+    Reach = gsub("Caldwell_Park_Rel", "Release", Reach),
+    RKM = gsub("540.25", "551.28/540.25", RKM)
+  )
+
+
+# Manually change regions
+phi_combined <- phi_combined %>% 
+  mutate(
+    Region = case_when(
+      reach_num == 3 ~ "Delta",
+      Region %in% c("West Delta", "SF Bay") ~ "Bay",
+      Region == "Upper Sac R" ~ "Upper Sacramento",
+      Region == "Lower Sac R"~ "Lower Sacramento",
+      TRUE ~ Region
+    )
+  )
+
+region_breaks <- c(1.5, 2.5, 3.5)
+
+plot.phi(phi_combined, type = "Region", add_breaks = T, ylabel = "Survival per 10km", 
+          xlabel = "Region", multiple = T)
+
+ggsave2("./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Region Survival per10km.png", width = 10, height = 6, dpi = 500)
+
+
+phi_table <- phi_combined %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, reach_num) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
+  ) %>% 
+  rename(
+    'Survival rate per 10km (SE)' = Estimate,
+    'Reach #' = reach_num
+  ) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Region Survival per10km.csv")
+
+
+#### Regional survival 
+
+# 2018
+outputs <- get.mark.model(all.inp_18, standardized = F, multiple = F)
+cleanup(ask = F)
+
+studyIDs <- "Winter_H_2018"
+phi_18 <- format_phi(outputs, multiple = F)
+
+# 2019
+outputs <- get.mark.model(all.inp_19, standardized = F, multiple = F)
+cleanup(ask = F)
+
+studyIDs <- "Winter_H_2019"
+phi_19 <- format_phi(outputs, multiple = F)
+
+phi_combined <- bind_rows(phi_18, phi_19) %>% 
+  mutate(
+    reach_start = gsub("Bonnyview_Rel", "Release", reach_start),
+    reach_start = gsub("Caldwell_Park_Rel", "Release", reach_start),
+    Reach = gsub("Bonnyview_Rel", "Release", Reach),
+    Reach = gsub("Caldwell_Park_Rel", "Release", Reach),
+    RKM = gsub("540.25", "551.28/540.25", RKM)
+  )
+
+phi_combined <- bind_rows(phi_18, phi_19) %>% 
+  mutate(
+    reach_start = gsub("Bonnyview_Rel", "Release", reach_start),
+    reach_start = gsub("Caldwell_Park_Rel", "Release", reach_start),
+    Reach = gsub("Bonnyview_Rel", "Release", Reach),
+    Reach = gsub("Caldwell_Park_Rel", "Release", Reach),
+    RKM = gsub("540.25", "551.28/540.25", RKM)
+  )
+
+
+# Manually change regions
+phi_combined <- phi_combined %>% 
+  mutate(
+    Region = case_when(
+      reach_num == 3 ~ "Delta",
+      Region %in% c("West Delta", "SF Bay") ~ "Bay",
+      Region == "Upper Sac R" ~ "Upper Sacramento",
+      Region == "Lower Sac R"~ "Lower Sacramento",
+      TRUE ~ Region
+    )
+  )
+
+region_breaks <- c(1.5, 2.5, 3.5)
+
+plot.phi(phi_combined, type = "Region", add_breaks = T, ylabel = "Survival", 
+         xlabel = "Region", multiple = T)
+
+ggsave2("./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Region Survival.png", width = 10, height = 6, dpi = 500)
+
+
+phi_table <- phi_combined %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, reach_num) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
+  ) %>% 
+  rename(
+    'Survival rate per 10km (SE)' = Estimate,
+    'Reach #' = reach_num
+  ) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/Winter_H_2018_2019/Winter_H_2018_2019 Region Survival.csv")
+
+
+#### Create INP for Mok_Fall_2018 -----------------------------------
+name <- "Mok_Fall_2018"
+
+studyIDs <- c("Mok_Fall_2018")
+
+# Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+
+# Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/Mok_Fall_2018/",
+                                             x, ".csv"))
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
+
+# Get list of all receiver GEN
+reach.meta <- get.receiver.GEN(all_detections)
+
+# leaflet(data = reach.meta) %>% addTiles() %>%
+#   addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
+#              label = ~as.character(GEN),
+#              labelOptions = labelOptions(noHide = T, textOnly = TRUE))
+
+
+
+reach.meta <- reach.meta %>% 
+  filter(
+    GEN %in% c("Sherman_Island_Rel", "ChippsE", "ChippsW", "BeniciaE", "BeniciaW",
+               "GoldenGateE", "GoldenGateW")
+  )
+
+# Build the key/pair for GEN replacement
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+all_EH <- lapply(all_aggregated, make_EH)
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+#### Mok_Fall_2018 Detection probability ---------------------------------------------------
+outputs <- get.mark.model(all.inp, standardized = F, multiple = F)
+cleanup(ask = FALSE)
+
+p <- format.p(outputs, multiple = F)
+
+# Plot detection probability
+# plot.p(p, multiple = F)
+# 
+# dir.create(paste0("./Outputs/", name), showWarnings = FALSE)  
+# write_csv(p, paste0(paste0("./Outputs/", name, "/", name, 
+#                            " detection probability.csv")))
+
+#### Mok_Fall_2018 Reach survival per 10km ----------------------------------------------------------------
+KM <- reach.meta.aggregate$GenRKM
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp, standardized = T, multiple = F)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = F)
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+region_breaks <- c(1.5, 2.5)
+
+# Plot survival probability
+plot.phi2(phi, type = "Reach",  add_breaks = F, ylabel = "Survival per 10km",
+         xlabel = "Reach", multiple = F, text_size = 12)
+
+
+ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
+       width = 6, height = 6, dpi = 500)
+
+phi_table <- make.phi.table(phi)
+write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name, 
+                                   " Reach Survival per10km.csv")))
+
+
+#### Mok_Fall_2018 Cumulative Survival By Year----------------------------------------------------------------
+cum_survival_2018 <- get_cum_survival((all.inp), T)
+cum_survival_2018
+
+cum_survival_all <- bind_rows(cum_survival_2018)
+
+cum_survival_all <- format.cum.surv(cum_survival_all)
+
+# Plot
+plot.cum.surv(cum_survival_all %>% 
+                filter(reach_num != 5), add_breaks = F, multiple = F)
+
+ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
+       width = 8, height = 6, dpi = 500)
+
+cum_survival_all <- cum_survival_all %>% 
+  select(
+    'Reach #', GEN, RKM, Region, 'Survival estimate (SE)', LCI, UCI
+  )
+
+write_csv(cum_survival_all, paste0(paste0("./Outputs/", name, "/", name, 
+                                          " Cumulative Survival.csv")))
 
 
 #### Create INP for BC-Spring-2018  -----------------------------------
@@ -815,18 +2158,24 @@ replace_dict <- list(replace_with = list(c()),
 
 studyIDs <- c("BC-Spring-2018")
 
-# Retreive ERDDAP data 
-all_detections <- lapply(studyIDs, get_detections)
+# Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+
+# Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/BC-Spring-2018/",
+                                             x, ".csv"))
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
 
 # Get list of all receiver GEN
 reach.meta <- get.receiver.GEN(all_detections)
 
-# Adjust sites, remove site above release, and Delta sites except Chipps
+# Remove duplicated release site
 reach.meta <- reach.meta %>% 
   filter(
     GEN != "UpperButte_RST",
-    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
-      GEN %in% c("ChippsE", "ChippsW")
   )
 
 all_aggregated <- lapply(all_detections, aggregate_GEN)
@@ -873,7 +2222,7 @@ all.inp <- pmap(list(all_detections,all_EH), create_inp) %>%
 KM <- reach.meta.aggregate$GenRKM
 reach_length <- abs(diff(KM))/10
 
-ouputs <- get.mark.model(all.inp, standardized = T, multiple = F)
+outputs <- get.mark.model(all.inp, standardized = T, multiple = F)
 
 phi <- format_phi(outputs, multiple = F)
 
@@ -890,7 +2239,7 @@ phi <- phi %>%
 # region_breaks <- get.region.breaks(phi)
 
 # Plot survival probability
-plot.phi(phi, type = "Reach", add_breaks = F, ylabel = "Survival per 10km",
+plot.phi2(phi, type = "Reach", add_breaks = F, ylabel = "Survival per 10km",
          xlabel = "Reach", multiple = F)
 
 # Create folder for studyid, save plot
@@ -907,452 +2256,132 @@ cum_survival_2018
 
 cum_survival_all <- cum_survival_2018
 
-cum_survival_all <- format.cum.surv(cum_survival_all, final = F)
+cum_survival_all <- format.cum.surv(cum_survival_all)
 
 # Plot
-plot.cum.surv(cum_survival_all, add_breaks = F)
+plot.cum.surv(cum_survival_all, add_breaks = F, multiple = F)
 
-cum_survival_all <- format.cum.surv(cum_survival_all, final = T)
+cum_survival_all <- format.cum.surv(cum_survival_all)
 
 ggsave2("./Outputs/BC-Spring-2018/BC-Spring-2018 Cumulative Survival.png", width = 10, height = 6, dpi = 500)
 write_csv(cum_survival_all, "./Outputs/BC-Spring-2018/BC-Spring-2018 Cumulative Survival.csv")
 
 
-#### Create INP for ColemanLateFall_2018  -----------------------------------
+
+
+#### Create INP for CNFH_FMR 2019/2020  -----------------------------------
 
 # Build the key/pair for GEN replacement
 replace_dict <- list(replace_with = list(c()),
                      replace_list = list(c()))
 
-studyIDs <- c("ColemanLateFall_2018")
+studyIDs <- c("CNFH_FMR_2019", "CNFH_FMR_2020")
 
-# Retreive ERDDAP data 
-all_detections <- lapply(studyIDs, get_detections)
+# # Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+
+# # Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/CNFH_FMR_2019_20/",
+                                             x, ".csv"))
+
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
 
 # Get list of all receiver GEN
 reach.meta <- get.receiver.GEN(all_detections)
 
-# Adjust sites, remove site above release, and Delta sites except Chipps
-reach.meta <- reach.meta %>% 
-  filter(
-    GEN != "LSNFH",
-    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
-      GEN %in% c("ChippsE", "ChippsW")
-  )
-
-# Filter out poor receiver sites based on receiver notes, and detection probability
-reach.meta <- reach.meta %>% 
-  filter(
-    !(GEN %in% c("AbvColusaBr", "Colusa BC3", "Freeport", "Blw_FR_GS2",
-                 "RB_Elks", "BlwChinaBend", "GCID_blw", "Blw_FremontWeir",
-                 "Blw_FRConf"))
-  )
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-
-all_EH <- lapply(all_aggregated, make_EH)
-
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-#### ColemanLateFall_2018 Detection probability ---------------------------------------------------
-outputs <- get.mark.model(all.inp)
-
-p <- format.p(outputs)
-
-# Plot detection probability
-p %>% 
-  mutate(
-    Reach = factor(reach_num, levels = p$reach_num)
-  ) %>% 
-  ggplot(mapping = aes(x = reach_num, y = estimate)) +
-  geom_point() +
-  geom_errorbar(mapping = aes(ymin = lcl, ymax = ucl)) +
-  ylab("Detection probability") +
-  xlab("Reach") +
-  geom_hline(yintercept = 0.7, linetype = 'dashed', color = 'red') +
-  scale_x_continuous(breaks = p$reach_num) +
-  theme_classic() +
-  theme(
-    panel.border = element_rect(colour = "black", fill=NA, size=.75),
-  )
-
-
-# Look at detection probabilities in which estimates are < 0.7
-p %>% 
-  filter(estimate < 0.7) %>% 
-  pull(reach_start)
-
-reach.meta <- reach.meta %>% 
-  filter(
-    # GEN start that have poor estimates
-    !GEN %in% c("Blw_Paynes_Ck", "GCID_abv", "Colusa AC2", "Colusa BC2",
-                "BlwTisdale", "Blw_FremontWeir", "Blw_FRConf"),
-    GEN != "LSNFH",
-    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
-      GEN %in% c("ChippsE", "ChippsW")
-  )
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-
-all_EH <- lapply(all_aggregated, make_EH)
-
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-outputs <- get.mark.model(all.inp)
-p <- format.p(outputs)
-
-#### ColemanLateFall_2018 Reach survival per 10km ----------------------------------------------------------------
-
-replace_dict <- list(replace_with = list(c("Chipps")),
-                     replace_list = list(c("ChippsE", "ChippsW")))
-
-# Make final selection of receiver sites
-reach.meta <- reach.meta %>% 
-  filter(
-    GEN %in% c("BattleCk_CNFH_Rel", "BattleCk4", "Blw_Paynes_Ck", "Abv_Altube1",
-               "Mill_Ck_Conf", "Abv_WoodsonBr", "Blw_IrvineFinch", "BlwOrd",
-               "ButteBr", "Colusa AC2", "Colusa BC2", "Blw_Knights_GS3", 
-               "Blw_Elkhorn_GS1", "TowerBridge", "Hood", "ChippsE", "ChippsW",
-               "BeniciaW", "GoldenGateE", "GoldenGateW")
-  )
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-
-all_EH <- lapply(all_aggregated, make_EH)
-
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-# Get river KM
-KM <- reach.meta.aggregate$GenRKM
-
-## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
-reach_length <- abs(diff(KM))/10
-
-all.process <- process.data(all.inp, model="CJS", begin.time=1,time.intervals = reach_length)
-
-#again, ? make.design.data if you are curious about this call
-all.ddl <- make.design.data(all.process)
-
-rm(list=ls(pattern="p.t.x.y"))
-rm(list=ls(pattern="Phi.t.x.y"))
-
-# ## Now, set up basic model structures
-#this is setting detection probability (p) to be a function of time x year, which is typically the best for simple survival analysis
-p.t.x.y <- list(formula= ~time)
-
-#This is setting the survival model to be a function of time (which is actually reach) x year
-Phi.t.x.y <- list(formula= ~time)
-
-#create a model list of the above models
-cml = create.model.list("CJS")
-
-# # Run mark.wrapper for all model structures (the combination of all phi and p models possible). Warning, this could take awhile if you have many models
-model.outputs <- mark.wrapper(cml, data=all.process, ddl=all.ddl) #,adjust=FALSE
-
-outputs <- model.outputs$Phi.t.x.y.p.t.x.y$results$real
-
-cleanup(ask = FALSE)
-
-# From outputs format to include the first half of rows which are phi estimates
-# Extract StudyID from the rowname jumble
-phi <- outputs %>%
-  slice(1:(nrow(outputs) / 2)) %>%
-  select(
-    -c("fixed", "note")
-  ) %>% 
-  add_column(
-    reach_start = reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN)-1)],
-    reach_end = reach.meta.aggregate$GEN[2:(length(reach.meta.aggregate$GEN))],
-    rkm_start = reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM)-1)],
-    rkm_end = reach.meta.aggregate$GenRKM[2:(length(reach.meta.aggregate$GenRKM))]
-  ) %>% 
-  left_join(
-    reach.meta.aggregate %>%
-      select(GEN, Region) %>%
-      distinct(),
-    by = c("reach_start" = "GEN")
-  ) %>% 
-  mutate(
-    Reach = paste0(reach_start, " to \n", reach_end),
-    RKM = paste0(rkm_start, " to ", rkm_end),
-    Region = case_when(
-      reach_end == "Blw_Paynes_Ck" ~ "Upper Sac R",
-      reach_start == "ButteBr" ~ "Upper Sac R",
-      reach_start == "Hood" ~ "Delta",
-      reach_start %in% c("Chipps", "BeniciaW", "GoldenGateE", "GoldenGateW") ~ "Bay",
-      TRUE ~ Region
-    ),
-    reach_num = 1:n()
-  )
-
-# Identify number of fish detected at each GEN, use that to filter out estimates for fish 
-# no longer seen
-unique_detects <- all_aggregated %>% 
+# B/c two studyID find only common sites between them
+common_sites <- all_detections %>% 
   bind_rows() %>% 
-  select(StudyID, FishID, GEN, GenRKM) %>% 
+  select(StudyID, GEN, GenRKM) %>% 
   distinct() %>% 
-  group_by(StudyID, GEN, GenRKM) %>% 
-  summarise(
-    count = n()
-  ) %>% 
-  arrange(StudyID, desc(GenRKM))
-
-# Add in counts to phi
-phi <- phi %>% 
-  left_join(unique_detects %>% 
-              select(GEN, count),
-            by = c("reach_end" = "GEN")) %>% 
-  mutate(count = ifelse(is.na(count), 0, count))
-
-region_breaks <- phi %>% 
-  group_by(Region) %>% 
-  summarise(breaks = max(reach_num)) %>% 
-  mutate(breaks = breaks + .5) %>% 
-  arrange(breaks) %>% 
-  slice(1:(n()-1)) %>% 
-  pull(breaks)
-
-# Plot survival probability
-phi %>% 
-  filter(reach_end != "GoldenGateW") %>% 
-  mutate(
-    Reach = factor(Reach, levels = phi$Reach)
-  ) %>% 
-  ggplot(mapping = aes(x = Reach, y = estimate)) +
-  geom_point() +
-  geom_errorbar(mapping = aes(x= Reach, ymin = lcl, ymax = ucl),  width = .1) +
-  ylab("Survival per 10km") +
-  xlab("Reach") +
-  geom_vline(xintercept = region_breaks, linetype = "dotted") +
-  theme_classic() +
-  theme(
-    panel.border = element_rect(colour = "black", fill=NA, size=.75),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-ggsave2("./Outputs/ColemanLateFall_2018/ColemanLateFall_2018 Reach Survival per10km.png", width = 10, height = 6, dpi = 500)
-
-
-phi_table <- phi %>% 
-  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, UCI = ucl, reach_num, count) %>% 
-  mutate(
-    Reach = str_remove_all(Reach, "\n"),
-    Estimate = round(Estimate, 2),
-    SE = round(SE, 2),
-    LCI = round(LCI, 2),
-    UCI = round(UCI, 2),
-    Estimate = paste0(Estimate, " (", as.character(SE), ")")
-  ) %>% 
-  rename('Survival rate per 10km (SE)' = Estimate) %>% 
-  select(-SE)
-
-write_csv(phi_table, "./Outputs/ColemanLateFall_2018/ColemanLateFall_2018 Reach Survival per10km.csv")
-
-
-#### ColemanLateFall_2018 Cumulative Survival By Year----------------------------------------------------------------
-
-cum_survival_2018 <- get_cum_survival((all.inp), T)
-cum_survival_2018
-
-cum_survival_all <- bind_rows(cum_survival_2018)
-
-cleanup(ask = FALSE)
-
-cum_survival_all <- cum_survival_all %>% 
-  add_column(
-    survival_to = rep(reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN))], length(studyIDs)),
-    survival_to_rkm = rep(reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM))], length(studyIDs)),
-    reach_num = rep(seq(1, (nrow(reach.meta.aggregate)), 1), length(studyIDs))
-  ) %>% 
-  left_join(
-    reach.meta.aggregate %>%
-      select(GEN, Region) %>% 
-      distinct(),
-    by = c("survival_to" = "GEN")
-  ) %>% 
-  mutate(
-    Region = case_when(
-      survival_to == "Blw_Paynes_Ck" ~ "Upper Sac R",
-      survival_to == "ButteBr" ~ "Upper Sac R",
-      survival_to == "Chipps" ~ "Lower Sac R",
-      survival_to %in% c("BeniciaW", "GoldenGateE", "GoldenGateW") ~ "Bay",
-      TRUE ~ Region
-    ),
-    Region = factor(Region, levels = c("Battle Ck", "Upper Sac R", "Lower Sac R", "Delta", "Bay"))
-  )
-
-region_breaks <- cum_survival_all %>%
-  group_by(Region) %>%
-  summarise(breaks = max(reach_num)) %>%
-  mutate(breaks = breaks + .5) %>%
-  slice(1:(n()-1)) %>%
-  pull(breaks)
-
-# Plot
-cum_survival_all %>% 
-  filter(survival_to != "GoldenGateW") %>% 
-  mutate(
-    survival_to = factor(survival_to, levels = reach.meta.aggregate$GEN,
-                         labels = paste0(reach.meta.aggregate$GEN, " (", reach.meta.aggregate$GenRKM, ")"))
-  ) %>% 
-  ggplot(mapping = aes(x = survival_to, y = cum.phi)) +
-  geom_point(size = 2) +
-  geom_errorbar(mapping = aes(x= survival_to, ymin = LCI, ymax = UCI),  width = .1) +
-  geom_line(size = 0.7, group = 1) +
-  ylab("Cumulative survival") +
-  xlab("Site (River KM)") +
-  geom_vline(xintercept = region_breaks, linetype = "dotted") +
-  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
-  theme_classic() +
-  theme(
-    panel.border = element_rect(colour = "black", fill=NA, size=.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    plot.margin=unit(c(.5,.5,.5,1), "cm"),
-  ) 
-
-
-ggsave2("./Outputs/ColemanLateFall_2018/ColemanLateFall_2018 Cumulative Survival.png", width = 10, height = 6, dpi = 500)
-
-
-write_csv(cum_survival_all, "./Outputs/ColemanLateFall_2018/ColemanLateFall_2018 Cumulative Survival.csv")
-
-
-
-
-#### Create INP for ColemanLateFall_2020  -----------------------------------
-
-# Build the key/pair for GEN replacement
-replace_dict <- list(replace_with = list(c()),
-                     replace_list = list(c()))
-
-studyIDs <- c("ColemanLateFall_2020")
-
-# Retreive ERDDAP data 
-all_detections <- lapply(studyIDs, get_detections)
-
-# Get list of all receiver GEN
-reach.meta <- all_detections %>% 
-  bind_rows() %>% 
-  distinct(GEN, GenRKM, GenLat, GenLon, Region) %>% 
-  # Necessary because detections files shows differing RKM, Lat, Lon for some GEN sometimes
+  select(GEN, GenRKM) %>% 
   group_by(GEN) %>% 
-  summarise(
-    GenRKM = mean(GenRKM),
-    GenLat = mean(GenLat),
-    GenLon = mean(GenLon),
-    Region = first(Region)
-  ) %>% 
-  arrange(desc(GenRKM))
-  
-
+  filter(n()>1) %>% 
+  distinct()
 
 # Adjust sites, remove site above release, and Delta sites except Chipps
-reach.meta <- reach.meta %>% 
+reach.meta <- reach.meta %>%
   filter(
     GEN != "LSNFH",
     !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
-      GEN %in% c("ChippsE", "ChippsW")
+      GEN %in% c("ChippsE", "ChippsW"),
+    # Choose only common sites OR release sites
+    GEN %in% common_sites$GEN | GEN %in% c("Caldwell_Park_Rel", "Bonnyview_Rel")
   )
 
-# Filter out poor receiver sites based on receiver notes, and detection probability
-reach.meta <- reach.meta %>% 
-  filter(
-    !(GEN %in% c("AbvColusaBr", "Colusa BC3", "Freeport", "Blw_FR_GS2",
-                 "RB_Elks", "BlwChinaBend", "GCID_blw", "Blw_FremontWeir",
-                 "Blw_FRConf"))
-  )
 
 all_aggregated <- lapply(all_detections, aggregate_GEN)
 
 all_EH <- lapply(all_aggregated, make_EH)
 
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>%
   bind_rows()
 
 
-#### ColemanLateFall_2020 Detection probability ---------------------------------------------------
-all.process <- process.data(all.inp, model="CJS", begin.time=1)
-all.ddl <- make.design.data(all.process)
+#### CNFH_FMR 2019/2020 Detection probability ---------------------------------------------------
+outputs <- get.mark.model(all.inp, multiple = T, standardized = F)
 
-rm(list=ls(pattern="p.t.x.y"))
-rm(list=ls(pattern="Phi.t.x.y"))
+p <- format.p(outputs, multiple = T)
 
-p.t.x.y <- list(formula= ~time)
-Phi.t.x.y <- list(formula= ~time)
+# Add in counts to p
+unique_detects <- get.unique.detects(all_aggregated)
+p <- p %>%
+  left_join(unique_detects %>%
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>%
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>%
+  left_join(unique_detects %>%
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>%
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
 
-cml = create.model.list("CJS")
+# Identify receivers that had poor detection efficiencies
+bad_rec <- p %>%
+  filter(estimate < 0.7) %>%
+  filter(!(reach_end %in% c("GoldenGateE", "GoldenGateW", "BeniciaE",
+                            "BeniciaW")))
 
-model.outputs <- mark.wrapper(cml, data=all.process, ddl=all.ddl) 
+# Compare estimates for each studyID
+df <- p %>% 
+  select(-c("se", "reach_num", "Reach", "RKM", "Region", "lcl", "ucl")) %>% 
+  pivot_wider(names_from = StudyID, values_from = c("estimate", "count_start", "count_end"),
+              names_glue = "{StudyID} {.value}")
 
-outputs <- model.outputs$Phi.t.x.y.p.t.x.y$results$real
+prefixes <- unique(p$StudyID)
 
-cleanup(ask = FALSE)
+names_to_order <- map(prefixes, ~ names(df)[grep(paste0(.x, " "), names(df))]) %>% unlist
+names_id <- setdiff(names(df), names_to_order)
 
-p <- outputs %>%
-  slice(
-    ((nrow(outputs)/2) +1):nrow(outputs)
-  ) %>%
-  select(
-    -c("fixed", "note")
-  ) %>%
-  add_column(
-    reach_start = reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN)-1)],
-    reach_end = reach.meta.aggregate$GEN[2:(length(reach.meta.aggregate$GEN))],
-    rkm_start = reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM)-1)],
-    rkm_end = reach.meta.aggregate$GenRKM[2:(length(reach.meta.aggregate$GenRKM))]
-  ) %>% 
-  mutate(
-    Reach = paste0(reach_start, " to \n", reach_end),
-    RKM = paste0(rkm_start, " to ", rkm_end),
-  ) %>% 
-  left_join(
-    reach.meta.aggregate %>%
-      select(GEN, Region) %>%
-      distinct(),
-    by = c("reach_start" = "GEN")
-  ) %>% 
-  mutate(reach_num = 1:n())
+df <- df %>%
+  select(names_id, names_to_order)
+
+write_csv(df, "./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Detection Proabbility.csv")
 
 # Plot detection probability
-p %>% 
-  mutate(
-    Reach = factor(reach_num, levels = p$reach_num)
-  ) %>% 
-  # mutate(reach_num = factor(reach_num, levels(factor(seq(1, 14))))) %>% 
-  ggplot(mapping = aes(x = reach_num, y = estimate)) +
-  geom_point() +
-  geom_errorbar(mapping = aes(ymin = lcl, ymax = ucl)) +
-  ylab("Detection probability") +
-  xlab("Reach") +
-  geom_hline(yintercept = 0.7, linetype = 'dashed', color = 'red') +
-  # geom_vline(xintercept = region_breaks, linetype = "dotted") +
-  # scale_y_continuous(breaks = seq(0.4, 1, .1), limits = c(0.4,1)) +
-  #scale_color_brewer(palette = "Set2") +
-  scale_x_continuous(breaks = p$reach_num) +
-  theme_classic() +
-  theme(
-    panel.border = element_rect(colour = "black", fill=NA, size=.75),
-    # axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+plot.p(p, multiple = T)
+# ggsave2("./Outputs/ColemanLateFall_2018_19/ColemanLateFall_2018 Detection Probability.png",
+#         width = 14, height = 6, dpi = 500)
 
-
-# Look at detection probabilities in which estimates are < 0.7
-p %>% 
-  filter(estimate < 0.7) %>% 
-  pull(reach_start)
-
+# Manually select sites to use
 reach.meta <- reach.meta %>% 
   filter(
-    # GEN start that have poor estimates
-    !GEN %in% c("Blw_Paynes_Ck", "GCID_abv", "Colusa AC2", "Colusa BC2",
-                "BlwTisdale", "Blw_FremontWeir", "Blw_FRConf"),
-    GEN != "LSNFH",
-    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
-      GEN %in% c("ChippsE", "ChippsW")
+    GEN %in% c("RBDD_Rel", "Blw_Salt", "Mill_Ck_Conf", "Abv_WoodsonBr",
+               "GCID_abv", "GCID_blw", "Blw_IrvineFinch", "BlwOrd", "ButteBr", 
+               "Colusa AC3", "Collusa BC2", "AbvTisdale", "BlwChinaBend", 
+               "Knights_RST", "Blw_FRConf", "TowerBridge",
+               "TowerBr", "BeniciaE", 
+               "BeniciaW", "GoldenGateE", "GoldenGateW")
   )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia"),
+                                         c("SacTrawl")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW"),
+                                         c("SacTrawl1", "SacTrawl2")))
 
 all_aggregated <- lapply(all_detections, aggregate_GEN)
 
@@ -1361,64 +2390,166 @@ all_EH <- lapply(all_aggregated, make_EH)
 all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
   bind_rows()
 
-all.process <- process.data(all.inp, model="CJS", begin.time=1)
-all.ddl <- make.design.data(all.process)
+outputs <- get.mark.model(all.inp, multiple = T, standardized = F)
 
-rm(list=ls(pattern="p.t.x.y"))
-rm(list=ls(pattern="Phi.t.x.y"))
+p <- format.p(outputs, multiple = T)
 
-p.t.x.y <- list(formula= ~time)
-Phi.t.x.y <- list(formula= ~time)
+# Add in counts to p
+unique_detects <- get.unique.detects(all_aggregated)
+p <- p %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
 
-cml = create.model.list("CJS")
+plot.p(p, multiple = T)
 
-model.outputs <- mark.wrapper(cml, data=all.process, ddl=all.ddl) 
 
-outputs <- model.outputs$Phi.t.x.y.p.t.x.y$results$real
+#### CNFH_FMR 2019/2020 Reach survival per 10km ----------------------------------------------------------------
 
-cleanup(ask = FALSE)
+write_csv(reach.meta.aggregate, "./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20_Sites.csv")
 
-p <- outputs %>%
-  slice(
-    ((nrow(outputs)/2) +1):nrow(outputs)
-  ) %>%
-  select(
-    -c("fixed", "note")
-  ) %>%
-  add_column(
-    reach_start = reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN)-1)],
-    reach_end = reach.meta.aggregate$GEN[2:(length(reach.meta.aggregate$GEN))],
-    rkm_start = reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM)-1)],
-    rkm_end = reach.meta.aggregate$GenRKM[2:(length(reach.meta.aggregate$GenRKM))]
-  ) %>% 
+# Get river KM
+KM <- reach.meta.aggregate$GenRKM
+
+## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
+reach_length <- abs(diff(KM))/10
+
+outputs <- get.mark.model(all.inp, standardized = T, multiple = T)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = T)
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+
+# Manually change regions
+phi <- phi %>% 
   mutate(
-    Reach = paste0(reach_start, " to \n", reach_end),
-    RKM = paste0(rkm_start, " to ", rkm_end),
+    Region = case_when(
+      rkm_end >= 344.100 ~ "Upper Sac R",
+      rkm_end < 344.100 & rkm_end >= 138.220 ~ "Lower Sac R",
+      rkm_end < 138.220 & rkm_end >= 52.140 ~ "Delta",
+      rkm_end < 52.140 ~ "Bay",
+      TRUE ~ Region
+    )
+  )
+
+region_breaks <- c(8.5, 14.5, 15.5)
+
+plot.phi(phi, type = "Reach", add_breaks = T, ylabel = "Survival per 10km", 
+         xlabel = "Reach", multiple = T)
+
+ggsave2("./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Reach Survival per10km.png", width = 12, height = 6, dpi = 500)
+
+
+phi_table <- phi %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, reach_num, 'Count start' = count_start, "Count end" = count_end) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
   ) %>% 
-  left_join(
-    reach.meta.aggregate %>%
-      select(GEN, Region) %>%
-      distinct(),
-    by = c("reach_start" = "GEN")
+  rename('Survival rate per 10km (SE)' = Estimate) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Reach Survival per10km.csv")
+
+#### CNFH_FMR 2019/2020 Reach survival raw ----------------------------------------------------------------
+
+# Get river KM
+KM <- reach.meta.aggregate$GenRKM
+
+outputs <- get.mark.model(all.inp, standardized = F, multiple = T)
+cleanup(ask = F)
+
+phi <- format_phi(outputs, multiple = T)
+
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
+
+# Add in counts to phi
+phi <- phi %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
+
+
+# Manually change regions
+phi <- phi %>% 
+  mutate(
+    Region = case_when(
+      rkm_end >= 344.100 ~ "Upper Sac R",
+      rkm_end < 344.100 & rkm_end >= 138.220 ~ "Lower Sac R",
+      rkm_end < 138.220 & rkm_end >= 52.140 ~ "Delta",
+      rkm_end < 52.140 ~ "Bay",
+      TRUE ~ Region
+    )
+  )
+
+region_breaks <- c(8.5, 14.5, 15.5)
+
+plot.phi(phi, type = "Reach", add_breaks = T, ylabel = "Survival per reach", 
+         xlabel = "Reach", multiple = T)
+
+ggsave2("./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Reach Survival.png", width = 12, height = 6, dpi = 500)
+
+
+phi_table <- phi %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, reach_num, 'Count start' = count_start, "Count end" = count_end) %>% 
+  mutate(
+    Reach = str_remove_all(Reach, "\n"),
+    Estimate = round(Estimate, 2),
+    SE = round(SE, 2),
+    LCI = round(LCI, 2),
+    UCI = round(UCI, 2),
+    Estimate = paste0(Estimate, " (", as.character(SE), ")")
   ) %>% 
-  mutate(reach_num = 1:n())
+  rename('Survival rate (SE)' = Estimate) %>% 
+  select(-SE)
+
+write_csv(phi_table, "./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Reach Survival.csv")
 
 
 
-#### ColemanLateFall_2020 Reach survival per 10km ----------------------------------------------------------------
+#### CNFH_FMR 2019/2020 Region Survival -------------------------------
 
-replace_dict <- list(replace_with = list(c("Chipps")),
-                     replace_list = list(c("ChippsE", "ChippsW")))
-
-# Make final selection of receiver sites
 reach.meta <- reach.meta %>% 
   filter(
-    GEN %in% c("BattleCk_CNFH_Rel", "BattleCk4", "Blw_Paynes_Ck", "Abv_Altube1",
-               "Mill_Ck_Conf", "Abv_WoodsonBr", "Blw_IrvineFinch", "BlwOrd",
-               "ButteBr", "Colusa AC2", "Colusa BC2", "Blw_Knights_GS3", 
-               "Blw_Elkhorn_GS1", "TowerBridge", "Hood", "ChippsE", "ChippsW",
-               "BeniciaW", "GoldenGateE", "GoldenGateW")
+    GEN %in% c("RBDD_Rel", "ButteBr", "TowerBridge", "BeniciaE", "BeniciaW",
+               "GoldenGateE", "GoldenGateW")
   )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW")))
 
 all_aggregated <- lapply(all_detections, aggregate_GEN)
 
@@ -1433,113 +2564,39 @@ KM <- reach.meta.aggregate$GenRKM
 ## Calculate the reach lengths. Here I devided reach lengths by 10 so that my survival estimates later will be survival per 10km
 reach_length <- abs(diff(KM))/10
 
-all.process <- process.data(all.inp, model="CJS", begin.time=1,time.intervals = reach_length)
+outputs <- get.mark.model(all.inp, standardized = T, multiple = T)
+cleanup(ask = F)
 
-#again, ? make.design.data if you are curious about this call
-all.ddl <- make.design.data(all.process)
+phi <- format_phi(outputs, multiple = T)
 
-rm(list=ls(pattern="p.t.x.y"))
-rm(list=ls(pattern="Phi.t.x.y"))
-
-# ## Now, set up basic model structures
-#this is setting detection probability (p) to be a function of time x year, which is typically the best for simple survival analysis
-p.t.x.y <- list(formula= ~time)
-
-#This is setting the survival model to be a function of time (which is actually reach) x year
-Phi.t.x.y <- list(formula= ~time)
-
-#create a model list of the above models
-cml = create.model.list("CJS")
-
-# # Run mark.wrapper for all model structures (the combination of all phi and p models possible). Warning, this could take awhile if you have many models
-model.outputs <- mark.wrapper(cml, data=all.process, ddl=all.ddl) #,adjust=FALSE
-
-outputs <- model.outputs$Phi.t.x.y.p.t.x.y$results$real
-
-cleanup(ask = FALSE)
-
-# From outputs format to include the first half of rows which are phi estimates
-# Extract StudyID from the rowname jumble
-phi <- outputs %>%
-  slice(1:(nrow(outputs) / 2)) %>%
-  select(
-    -c("fixed", "note")
-  ) %>% 
-  add_column(
-    reach_start = reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN)-1)],
-    reach_end = reach.meta.aggregate$GEN[2:(length(reach.meta.aggregate$GEN))],
-    rkm_start = reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM)-1)],
-    rkm_end = reach.meta.aggregate$GenRKM[2:(length(reach.meta.aggregate$GenRKM))]
-  ) %>% 
-  left_join(
-    reach.meta.aggregate %>%
-      select(GEN, Region) %>%
-      distinct(),
-    by = c("reach_start" = "GEN")
-  ) %>% 
-  mutate(
-    Reach = paste0(reach_start, " to \n", reach_end),
-    RKM = paste0(rkm_start, " to ", rkm_end),
-    Region = case_when(
-      reach_end == "Blw_Paynes_Ck" ~ "Upper Sac R",
-      reach_start == "ButteBr" ~ "Upper Sac R",
-      reach_start == "Hood" ~ "Delta",
-      reach_start %in% c("Chipps", "BeniciaW", "GoldenGateE", "GoldenGateW") ~ "Bay",
-      TRUE ~ Region
-    ),
-    reach_num = 1:n()
-  )
-
-# Identify number of fish detected at each GEN, use that to filter out estimates for fish 
-# no longer seen
-unique_detects <- all_aggregated %>% 
-  bind_rows() %>% 
-  select(StudyID, FishID, GEN, GenRKM) %>% 
-  distinct() %>% 
-  group_by(StudyID, GEN, GenRKM) %>% 
-  summarise(
-    count = n()
-  ) %>% 
-  arrange(StudyID, desc(GenRKM))
+# Identify number of fish detected at each GEN
+unique_detects <- get.unique.detects(all_aggregated)
 
 # Add in counts to phi
 phi <- phi %>% 
   left_join(unique_detects %>% 
-              select(GEN, count),
-            by = c("reach_end" = "GEN")) %>% 
-  mutate(count = ifelse(is.na(count), 0, count))
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
 
-region_breaks <- phi %>% 
-  group_by(Region) %>% 
-  summarise(breaks = max(reach_num)) %>% 
-  mutate(breaks = breaks + .5) %>% 
-  arrange(breaks) %>% 
-  slice(1:(n()-1)) %>% 
-  pull(breaks)
 
-# Plot survival probability
-phi %>% 
-  filter(reach_end != "GoldenGateW") %>% 
-  mutate(
-    Reach = factor(Reach, levels = phi$Reach)
-  ) %>% 
-  ggplot(mapping = aes(x = Reach, y = estimate)) +
-  geom_point() +
-  geom_errorbar(mapping = aes(x= Reach, ymin = lcl, ymax = ucl),  width = .1) +
-  ylab("Survival per 10km") +
-  xlab("Reach") +
-  geom_vline(xintercept = region_breaks, linetype = "dotted") +
-  theme_classic() +
-  theme(
-    panel.border = element_rect(colour = "black", fill=NA, size=.75),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+# Manually change regions
+phi$Region <- rep(c("Upper Sacramento", "Lower Sacramento", "Delta", "Bay", "Bay"), 2)
+region_breaks <- c(1.5, 2.5, 3.5)
 
-ggsave2("./Outputs/ColemanLateFall_2020/ColemanLateFall_2020 Reach Survival per10km.png", width = 10, height = 6, dpi = 500)
+plot.phi(phi, type = "Region", add_breaks = T, ylabel = "Survival per 10km", 
+         xlabel = "Region", multiple = T)
+
+ggsave2("./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Region Survival per10km.png", width = 10, height = 6, dpi = 500)
 
 
 phi_table <- phi %>% 
-  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, UCI = ucl, reach_num, count) %>% 
+  select(StudyID, Reach, RKM, Region, Estimate = estimate, SE = se, LCI = lcl, 
+         UCI = ucl, 'Reach #' = reach_num) %>% 
   mutate(
     Reach = str_remove_all(Reach, "\n"),
     Estimate = round(Estimate, 2),
@@ -1551,89 +2608,137 @@ phi_table <- phi %>%
   rename('Survival rate per 10km (SE)' = Estimate) %>% 
   select(-SE)
 
-write_csv(phi_table, "./Outputs/ColemanLateFall_2020/ColemanLateFall_2020 Reach Survival per10km.csv")
+write_csv(phi_table, "./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Region Survival per10km.csv")
 
 
-#### ColemanLateFall_2020 Cumulative Survival By Year----------------------------------------------------------------
 
-cum_survival_2020 <- get_cum_survival((all.inp), T)
-cum_survival_2020
+#### CNFH_FMR 2019/2020 Cumulative Survival By Year----------------------------------------------------------------
+reach.meta <- get.receiver.GEN(all_detections)
 
-cum_survival_all <- bind_rows(cum_survival_2020)
+# Manually select sites to use
+reach.meta <- reach.meta %>% 
+  filter(
+    GEN %in% c("RBDD_Rel", "Blw_Salt", "Mill_Ck_Conf", "Abv_WoodsonBr",
+               "GCID_abv", "GCID_blw", "Blw_IrvineFinch", "BlwOrd", "ButteBr", 
+               "Colusa AC3", "Collusa BC2", "AbvTisdale", "BlwChinaBend", 
+               "Knights_RST", "Blw_FRConf", "TowerBridge",
+               "TowerBr", "BeniciaE", 
+               "BeniciaW", "GoldenGateE", "GoldenGateW")
+  )
+
+replace_dict <- list(replace_with = list(c("Chipps"),
+                                         c("Benicia"),
+                                         c("SacTrawl")),
+                     replace_list = list(c("ChippsE", "ChippsW"),
+                                         c("BeniciaE", "BeniciaW"),
+                                         c("SacTrawl1", "SacTrawl2")))
+
+all_aggregated <- lapply(all_detections, aggregate_GEN)
+
+all_EH <- lapply(all_aggregated, make_EH)
+
+all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
+  bind_rows()
+
+
+cum_survival_2019 <- get_cum_survival((all.inp %>% 
+                                         filter(StudyID == "CNFH_FMR_2019")), T)
+cum_survival_2020 <- get_cum_survival((all.inp %>% 
+                                         filter(StudyID == "CNFH_FMR_2020")), T)
+
+cum_survival_all <- bind_rows(cum_survival_2019, cum_survival_2020)
 
 cleanup(ask = FALSE)
 
 cum_survival_all <- cum_survival_all %>% 
   add_column(
-    survival_to = rep(reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN))], length(studyIDs)),
-    survival_to_rkm = rep(reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM))], length(studyIDs)),
+    GEN = rep(reach.meta.aggregate$GEN[1:(length(reach.meta.aggregate$GEN))], length(studyIDs)),
+    GenRKM = rep(reach.meta.aggregate$GenRKM[1:(length(reach.meta.aggregate$GenRKM))], length(studyIDs)),
     reach_num = rep(seq(1, (nrow(reach.meta.aggregate)), 1), length(studyIDs))
   ) %>% 
   left_join(
     reach.meta.aggregate %>%
       select(GEN, Region) %>% 
-      distinct(),
-    by = c("survival_to" = "GEN")
+      distinct()
+  ) %>% 
+  mutate_at(
+    vars("cum.phi", "cum.phi.se", "LCI", 'UCI'), round, digits= 2
   ) %>% 
   mutate(
     Region = case_when(
-      survival_to == "Blw_Paynes_Ck" ~ "Upper Sac R",
-      survival_to == "ButteBr" ~ "Upper Sac R",
-      survival_to == "Chipps" ~ "Lower Sac R",
-      survival_to %in% c("BeniciaW", "GoldenGateE", "GoldenGateW") ~ "Bay",
+      GenRKM >= 344.100 ~ "Upper Sac R",
+      GenRKM < 344.100 & GenRKM >= 138.220 ~ "Lower Sac R",
+      GenRKM < 138.220 & GenRKM >= 52.140 ~ "Delta",
+      GenRKM < 52.140 ~ "Bay",
       TRUE ~ Region
     ),
-    Region = factor(Region, levels = c("Battle Ck", "Upper Sac R", "Lower Sac R", "Delta", "Bay"))
+    Region = factor(Region, levels = c("Upper Sac R", "Lower Sac R", "Delta", "Bay")),
+    'Survival estimate (SE)' = paste0(cum.phi," (",  cum.phi.se, ")")
+  ) %>% 
+  filter(
+    GEN != "GoldenGateW"
   )
 
-region_breaks <- cum_survival_all %>%
-  group_by(Region) %>%
-  summarise(breaks = max(reach_num)) %>%
-  mutate(breaks = breaks + .5) %>%
-  slice(1:(n()-1)) %>%
-  pull(breaks)
+region_breaks <- c(9.5, 15.5, 16.5)
+
+plot.cum.surv(cum_survival_all, add_breaks = T, multiple = T)
 
 # Plot
-cum_survival_all %>% 
-  filter(survival_to != "GoldenGateW") %>% 
-  mutate(
-    survival_to = factor(survival_to, levels = reach.meta.aggregate$GEN,
-                         labels = paste0(reach.meta.aggregate$GEN, " (", reach.meta.aggregate$GenRKM, ")"))
-  ) %>% 
-  ggplot(mapping = aes(x = survival_to, y = cum.phi)) +
-  geom_point(size = 2) +
-  geom_errorbar(mapping = aes(x= survival_to, ymin = LCI, ymax = UCI),  width = .1) +
-  geom_line(size = 0.7, group = 1) +
-  ylab("Cumulative survival") +
-  xlab("Site (River KM)") +
-  geom_vline(xintercept = region_breaks, linetype = "dotted") +
-  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
-  theme_classic() +
-  theme(
-    panel.border = element_rect(colour = "black", fill=NA, size=.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    plot.margin=unit(c(.5,.5,.5,1), "cm"),
-  ) 
+# cum_survival_all %>% 
+#   filter(GEN != "GoldenGateW") %>% 
+#   mutate(
+#     GEN = factor(GEN, levels = reach.meta.aggregate$GEN,
+#                  labels = paste0(reach.meta.aggregate$GEN, " (", reach.meta.aggregate$GenRKM, ")"))
+#   ) %>% 
+#   ggplot(mapping = aes(x = GEN, y = cum.phi, group = StudyID)) +
+#   geom_point(size = 2, aes(color = StudyID)) +
+#   geom_errorbar(mapping = aes(x= GEN, ymin = LCI, ymax = UCI, color = StudyID),  width = .1) +
+#   geom_line(size = 0.7, aes(color = StudyID)) +
+#   ylab("Cumulative survival") +
+#   xlab("Site (River KM)") +
+#   geom_vline(xintercept = region_breaks, linetype = "dotted") +
+#   scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+#   scale_color_manual(values=c("#007EFF", "#FF8100")) +
+#   theme_classic() +
+#   theme(
+#     panel.border = element_rect(colour = "black", fill=NA, size=.5),
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     plot.margin=unit(c(.5,.5,.5,1), "cm"),
+#     legend.position = "bottom"
+#   ) 
 
 
-ggsave2("./Outputs/ColemanLateFall_2020/ColemanLateFall_2020 Cumulative Survival.png", width = 10, height = 6, dpi = 500)
+ggsave2("./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Cumulative Survival.png", width = 10, height = 6, dpi = 500)
 
 
-write_csv(cum_survival_all, "./Outputs/ColemanLateFall_2020/ColemanLateFall_2020 Cumulative Survival.csv")
+cum_survival_all <- cum_survival_all %>% 
+  select(StudyID, 'Reach #' = reach_num, GEN, GenRKM, Region, 'Survival estimate (SE)', 
+         LCI, UCI)
+
+write_csv(cum_survival_all, "./Outputs/CNFH_FMR_2019_20/CNFH_FMR_2019_20 Cumulative Survival.csv")
 
 
 
-#### Create INP for DeerCk_Wild_2018 -----------------------------------
-name <- "DeerCk_Wild_2018"
+#### Create INP for DeerCk_Wild_CHK_2018 -----------------------------------
+name <- "DeerCk_Wild_CHK_2018"
 
 # Build the key/pair for GEN replacement
 replace_dict <- list(replace_with = list(c()),
                      replace_list = list(c()))
 
-studyIDs <- c("DeerCk_Wild_2018")
+studyIDs <- c("DeerCk_Wild_CHK_2018")
 
-# Retreive ERDDAP data 
-all_detections <- lapply(studyIDs, get_detections)
+# Retreive ERDDAP data if first time
+# all_detections <- lapply(studyIDs, get_detections)
+
+# Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/DeerCk_Wild_CHK_2018/",
+                                             x, ".csv"))
+
+# pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
 
 # Get list of all receiver GEN
 reach.meta <- get.receiver.GEN(all_detections)
@@ -1658,7 +2763,7 @@ cleanup(ask = FALSE)
 p <- format.p(outputs, multiple = F)
 
 # Plot detection probability
-plot.p(p)
+plot.p(p, multiple = F)
 
 # Identify and remove sites with low p <0.7
 reach.meta <- reach.meta %>% 
@@ -1687,9 +2792,23 @@ write_csv(p, paste0(paste0("./Outputs/", name, "/", name,
 replace_dict <- list(replace_with = list(c()),
                      replace_list = list(c()))
 
-reach.meta <- reach.meta %>% 
+# Get list of all receiver GEN
+reach.meta <- get.receiver.GEN(all_detections)
+
+# FUll list but don't use because only 2 fish remaining after ButteBr
+# reach.meta <- reach.meta %>%
+#   filter(
+#     GEN %in% c("DeerCk_RST", "DeerCk1","DeerCk3","DeerCk4.5", "Abv_WoodsonBr",
+#                "GCID_abv", "Blw_IrvineFinch", "BlwOrd", "ButteBr", "Colusa AC2",
+#                "Colusa BC2", "Colusa BC4", "BlwTisdale", "Knights_RST",
+#                "Abv_FremontWeir", "Blw_FRConf", "TowerBridge", "I80-50_Br",
+#                "Freeport", "Hood")
+#   )
+
+reach.meta <- reach.meta %>%
   filter(
-    GEN %in% c("DeerCk_RST", "DeerCk3", "Abv_WoodsonBr", "GCID_abv", "Blw_IrvineFinch", "BlwOrd", "ButteBr")
+    GEN %in% c("DeerCk_RST","DeerCk3","Abv_WoodsonBr",
+               "GCID_abv", "Blw_IrvineFinch", "BlwOrd", "ButteBr", "Colusa AC2")
   )
 
 all_aggregated <- lapply(all_detections, aggregate_GEN)
@@ -1713,14 +2832,18 @@ unique_detects <- get.unique.detects(all_aggregated)
 # Add in counts to phi
 phi <- phi %>% 
   left_join(unique_detects %>% 
-              select(GEN, count),
-            by = c("reach_end" = "GEN")) %>% 
-  mutate(count = ifelse(is.na(count), 0, count))
+              select(GEN, StudyID, count_start = count),
+            by = c("reach_start" = "GEN", "StudyID")) %>% 
+  mutate(count_start = ifelse(is.na(count_start), 0, count_start)) %>% 
+  left_join(unique_detects %>% 
+              select(GEN, StudyID, count_end = count),
+            by = c("reach_end" = "GEN", "StudyID")) %>% 
+  mutate(count_end = ifelse(is.na(count_end), 0, count_end))
 
-region_breaks <- 2.5
+region_breaks <- c(2.5)
 
 # Plot survival probability
-plot.phi(phi, type = "Reach", add_breaks = T, ylabel = "Survival per 10km",
+plot.phi2(phi %>% filter(reach_num != 7), type = "Reach", add_breaks = T, ylabel = "Survival per 10km",
          xlabel = "Reach", multiple = F)
 
 ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
@@ -1729,7 +2852,6 @@ ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
 phi_table <- make.phi.table(phi)
 write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name, 
                            " Reach Survival per10km.csv")))
-
 
 #### DeerCk_Wild_2018 Cumulative Survival By Year----------------------------------------------------------------
 cum_survival_2018 <- get_cum_survival((all.inp), T)
@@ -1741,7 +2863,7 @@ cum_survival_all <- format.cum.surv(cum_survival_all)
 
 # Plot
 region_breaks <- 2.5
-plot.cum.surv(cum_survival_all, T)
+plot.cum.surv(cum_survival_all %>% filter(reach_num != 7), add_breaks = T, multiple = F)
 
 ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
        width = 9, height = 6, dpi = 500)
@@ -1760,7 +2882,7 @@ replace_dict <- list(replace_with = list(c()),
 
 reach.meta <- reach.meta %>% 
   filter(
-    GEN %in% c("DeerCk_RST", "Abv_WoodsonBr", "ButteBr")
+    GEN %in% c("DeerCk_RST", "Abv_WoodsonBr", "ButteBr", "Colusa AC2")
   )
 
 all_aggregated <- lapply(all_detections, aggregate_GEN)
@@ -1822,111 +2944,6 @@ write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name,
                                    " Region Survival.csv")))
 
 
-#### Create INP for Mok_Fall_2018 -----------------------------------
-name <- "Mok_Fall_2018"
-
-studyIDs <- c("Mok_Fall_2018")
-
-# Retreive ERDDAP data 
-all_detections <- lapply(studyIDs, get_detections)
-
-# Get list of all receiver GEN
-reach.meta <- get.receiver.GEN(all_detections)
-
-# leaflet(data = reach.meta) %>% addTiles() %>%
-#   addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
-#              label = ~as.character(GEN),
-#              labelOptions = labelOptions(noHide = T, textOnly = TRUE))
-
-
-
-reach.meta <- reach.meta %>% 
-  filter(
-    GEN %in% c("Sherman_Island_Rel", "ChippsE", "ChippsW", "BeniciaE", "BeniciaW",
-               "GoldenGateE", "GoldenGateW")
-  )
-
-# Build the key/pair for GEN replacement
-replace_dict <- list(replace_with = list(c("Chipps"),
-                                         c("Benicia")),
-                     replace_list = list(c("ChippsE", "ChippsW"),
-                                         c("BeniciaE", "BeniciaW")))
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-all_EH <- lapply(all_aggregated, make_EH)
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-#### Mok_Fall_2018 Detection probability ---------------------------------------------------
-outputs <- get.mark.model(all.inp, standardized = F, multiple = F)
-cleanup(ask = FALSE)
-
-p <- format.p(outputs, multiple = F)
-
-# Plot detection probability
-plot.p(p)
-
-dir.create(paste0("./Outputs/", name), showWarnings = FALSE)  
-write_csv(p, paste0(paste0("./Outputs/", name, "/", name, 
-                           " detection probability.csv")))
-
-#### Mok_Fall_2018 Reach survival per 10km ----------------------------------------------------------------
-KM <- reach.meta.aggregate$GenRKM
-reach_length <- abs(diff(KM))/10
-
-outputs <- get.mark.model(all.inp, standardized = T, multiple = F)
-cleanup(ask = F)
-
-phi <- format_phi(outputs, multiple = F)
-
-# Identify number of fish detected at each GEN, use that to filter out estimates for fish 
-# no longer seen
-unique_detects <- get.unique.detects(all_aggregated)
-
-# Add in counts to phi
-phi <- phi %>% 
-  left_join(unique_detects %>% 
-              select(GEN, count),
-            by = c("reach_end" = "GEN")) %>% 
-  mutate(count = ifelse(is.na(count), 0, count))
-
-# region_breaks <- get.region.breaks(phi)
-
-# Plot survival probability
-plot.phi(phi, type = "Reach",  add_breaks = F, ylabel = "Survival per 10km",
-         xlabel = "Reach", multiple = F)
-
-
-ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
-       width = 6, height = 6, dpi = 500)
-
-phi_table <- make.phi.table(phi)
-write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name, 
-                                   " Reach Survival per10km.csv")))
-
-
-#### Mok_Fall_2018 Cumulative Survival By Year----------------------------------------------------------------
-cum_survival_2018 <- get_cum_survival((all.inp), T)
-cum_survival_2018
-
-cum_survival_all <- bind_rows(cum_survival_2018)
-
-cum_survival_all <- format.cum.surv(cum_survival_all)
-
-# Plot
-plot.cum.surv(cum_survival_all %>% 
-                filter(reach_num != 5), F)
-
-ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
-       width = 6, height = 6, dpi = 500)
-
-cum_survival_all <- cum_survival_all %>% 
-  select(
-    'Reach #', GEN, RKM, Region, 'Survival estimate (SE)', LCI, UCI
-  )
-
-write_csv(cum_survival_all, paste0(paste0("./Outputs/", name, "/", name, 
-                                   " Cumulative Survival.csv")))
 
 ### Create INP for Nimbus_Fall_2018 -----------------------------------
 name <- "Nimbus_Fall_2018"
@@ -2047,7 +3064,8 @@ cleanup(ask = F)
 
 phi <- format_phi(outputs, multiple = F)
 
-unique_detects <- all_aggregated %>% bind_rows() %>% 
+unique_detects <- all_aggregated %>% 
+  bind_rows() %>% 
   select(FishID, GEN) %>% 
   distinct() %>% 
   left_join(
@@ -2066,10 +3084,10 @@ phi <- phi %>%
             by = c("reach_end" = "GEN")) %>% 
   mutate(count = ifelse(is.na(count), 0, count))
 
-region_breaks <- c(1.5, 4.5, 5.5)
+region_breaks <- c(1.5, 3.5, 4.5)
 
 # Plot survival probability
-plot.phi(phi, type = "Reach", add_breaks =  T, ylabel = "Survival rate per 10km", 
+plot.phi2(phi, type = "Reach", add_breaks =  T, ylabel = "Survival rate per 10km", 
         xlabel = "Reach",  multiple = F)
 
 
@@ -2085,12 +3103,16 @@ write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name,
 cum_survival_2018 <- get_cum_survival((all.inp), T)
 cum_survival_2018
 
-cum_survival_all <- bind_rows(cum_survival_2018)
+cum_survival_all <- bind_rows(cum_survival_2018) %>% 
+  mutate_at(
+    vars("cum.phi", "cum.phi.se", "LCI", 'UCI'), round, digits= 2
+  ) 
 
 cum_survival_all <- format.cum.surv(cum_survival_all)
 
 # Plot
-plot.cum.surv(cum_survival_all, T)
+region_breaks <- c(.5, 3.5, 4.5)
+plot.cum.surv(cum_survival_all, add_breaks = T, multiple = F)
 
 ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
        width = 10, height = 6, dpi = 500)
@@ -2209,17 +3231,24 @@ replace_dict <- list(replace_with = list(c()),
 
 studyIDs <- c("RBDD_2018")
 
-# Retreive ERDDAP data 
+# Retreive ERDDAP data if first time
 all_detections <- lapply(studyIDs, get_detections)
+
+# Save detections to CSV 
+names <- lapply(studyIDs, function(x) paste0("./outputs/RBDD_2018/",
+                                             x, ".csv"))
+pmap(list(all_detections, names), write_csv)
+
+# Load CSV's if not first time
+all_detections <- lapply(names, read_csv)
 
 # Get list of all receiver GEN
 reach.meta <- get.receiver.GEN(all_detections)
 
-leaflet(data = reach.meta) %>% addTiles() %>%
-  addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
-             label = ~as.character(GEN),
-             labelOptions = labelOptions(noHide = T, textOnly = TRUE))
-
+# leaflet(data = reach.meta) %>% addTiles() %>%
+#   addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
+#              label = ~as.character(GEN),
+#              labelOptions = labelOptions(noHide = T, textOnly = TRUE)
 
 # Adjust sites, remove site above release, and Delta sites except Chipps
 reach.meta <- reach.meta %>%
@@ -2234,10 +3263,10 @@ all.inp <- pmap(list(all_detections,all_EH), create_inp) %>%
   bind_rows()
 
 #### RBDD_2018 Detection probability ---------------------------------------------------
-outputs <- get.mark.model(all.inp, F)
+outputs <- get.mark.model(all.inp, standardized = F, multiple = F)
 cleanup(ask = FALSE)
 
-p <- format.p(outputs)
+p <- format.p(outputs, multiple = F)
 
 # Plot detection probability
 plot.p(p)
@@ -2434,152 +3463,6 @@ write_csv(phi_region_table, paste0(paste0("./Outputs/", name, "/", name,
                                           " Region Survival.csv")))
 
 
-##### Create INP for RBDD_WR_2018 -----------------------------------
-name <- "RBDD_WR_2018"
-
-# Build the key/pair for GEN replacement
-replace_dict <- list(replace_with = list(c()),
-                     replace_list = list(c()))
-
-studyIDs <- c("RBDD_WR_2018")
-
-# Retreive ERDDAP data 
-all_detections <- lapply(studyIDs, get_detections)
-
-# Get list of all receiver GEN
-reach.meta <- get.receiver.GEN(all_detections)
-
-reach.meta <- reach.meta %>% 
-  filter(
-    !Region %in% c("North Delta", "East Delta", "West Delta", "Yolo Bypass") |
-      GEN %in% c("ChippsE", "ChippsW"),
-    GEN != "I80-50_Br"
-  )
-
-leaflet(data = reach.meta) %>% addTiles() %>%
-  addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
-             label = ~as.character(GEN),
-             labelOptions = labelOptions(noHide = T, textOnly = TRUE))
-
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-all_EH <- lapply(all_aggregated, make_EH)
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-#### RBDD_WR_2018 Detection probability ---------------------------------------------------
-outputs <- get.mark.model(all.inp, F, multiple = F)
-cleanup(ask = FALSE)
-
-p <- format.p(outputs, multiple = F)
-
-# Plot detection probability
-plot.p(p)
-
-# Identify and remove sites with low p <0.7
-reach.meta <- reach.meta %>% 
-  filter(
-    !(GEN %in% c("Abv_FremontWeir", "Blw_FremontWeir"))
-  )
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-all_EH <- lapply(all_aggregated, make_EH)
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-# Then rerun 
-outputs <- get.mark.model(all.inp, F)
-cleanup(ask = FALSE)
-
-p <- format.p(outputs)
-
-# Plot detection probability
-plot.p(p)
-
-dir.create(paste0("./Outputs/", name), showWarnings = FALSE)  
-write_csv(p, paste0(paste0("./Outputs/", name, "/", name, 
-                           " detection probability.csv")))
-
-#### RBDD_WR_2018 Reach survival per 10km ----------------------------------------------------------------
-replace_dict <- list(replace_with = list(c("Chipps"),
-                                         c("SacTrawl"),
-                                         c("Benicia")),
-                     replace_list = list(c("ChippsE", "ChippsW"),
-                                         c("SacTrawl1", "SacTrawl2"),
-                                         c("BeniciaE", "BeniciaW")))
-
-reach.meta <- reach.meta %>%
-  filter(
-    GEN %in% c("RBDD_Rel", "Blw_Salt", "BankRobber", "Lwr_Ant_Crk", "Mill_Ck_Conf",
-               "Abv_WoodsonBr", "Blw_Woodson", "GCID_abv", "GCID_blw", 
-               "Blw_IrvineFinch")
-  ) 
-
-
-all_aggregated <- lapply(all_detections, aggregate_GEN)
-all_EH <- lapply(all_aggregated, make_EH)
-all.inp <- pmap(list(all_detections,all_EH), create_inp) %>% 
-  bind_rows()
-
-leaflet(data = reach.meta.aggregate) %>% addTiles() %>%
-  addMarkers(~GenLon, ~GenLat, popup = ~as.character(GEN),
-             label = ~as.character(GEN),
-             labelOptions = labelOptions(noHide = T, textOnly = TRUE))
-
-KM <- reach.meta.aggregate$GenRKM
-reach_length <- abs(diff(KM))/10
-
-outputs <- get.mark.model(all.inp, standardized = T, multiple = F)
-cleanup(ask = F)
-
-phi <- format_phi(outputs, multiple = F)
-
-# Identify number of fish detected at each GEN, use that to filter out estimates for fish 
-# no longer seen
-unique_detects <- get.unique.detects(all_aggregated)
-
-# Add in counts to phi
-phi <- phi %>% 
-  left_join(unique_detects %>% 
-              select(GEN, count) %>% 
-              distinct(),
-            by = c("reach_end" = "GEN")) %>% 
-  mutate(count = ifelse(is.na(count), 0, count))
-
-
-# Plot survival probability
-plot.phi(phi, type = "Reach", add_breaks = F, ylabel = "Survival rate per 10km",
-         xlabel = "Reach", multiple = F)
-
-ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
-       width = 10, height = 6, dpi = 500)
-
-phi_table <- make.phi.table(phi)
-write_csv(phi_table, paste0(paste0("./Outputs/", name, "/", name, 
-                                   " Reach Survival per10km.csv")))
-
-#### RBDD_WR_2018 Cumulative Survival By Year----------------------------------------------------------------
-cum_survival_2018 <- get_cum_survival((all.inp), add_release = T)
-cum_survival_2018
-
-cum_survival_all <- bind_rows(cum_survival_2018)
-
-cum_survival_all <- format.cum.surv(cum_survival_all)
-
-# Plot
-plot.cum.surv(cum_survival_all, add_breaks = F)
-
-ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
-       width = 10, height = 6, dpi = 500)
-
-cum_survival_all <- cum_survival_all %>% 
-  select(
-    'Reach #', GEN, RKM, Region, 'Survival estimate (SE)', LCI, UCI
-  )
-
-write_csv(cum_survival_all, paste0(paste0("./Outputs/", name, "/", name, 
-                                          " Cumulative Survival.csv")))
-
 
 ### Create INP for SB_Spring_2018_2019 -----------------------------------
 name <- "SB_Spring_2018_2019"
@@ -2596,12 +3479,12 @@ all_detections <- lapply(studyIDs, get_detections)
 # Get list of all receiver GEN
 reach.meta <- get.receiver.GEN(all_detections)
 
-# Multi-year studyID so use common sites list
-common_sites <- read_csv("SB_Spring_2018_2019_ReceiverSites.csv") %>% 
-  filter(
-    SB_Spring_2018 == "PRESENT",
-    SB_Spring_2019 == "PRESENT"
-  )
+# # Multi-year studyID so use common sites list
+# common_sites <- read_csv("SB_Spring_2018_2019_ReceiverSites.csv") %>% 
+#   filter(
+#     SB_Spring_2018 == "PRESENT",
+#     SB_Spring_2019 == "PRESENT"
+#   )
 
 reach.meta <- reach.meta %>% 
   filter(
@@ -2706,7 +3589,7 @@ phi <- phi %>%
 region_breaks <- c(4.5, 6.5, 7.5)
 
 # Plot survival probability
-plot.phi(phi, type = "Reach", add_breaks = T, ylabel = "Survival rate per 10km",
+plot.phi2(phi, type = "Reach", add_breaks = T, ylabel = "Survival rate per 10km",
          xlabel = "Reach", multiple = T, padding = 25)
 
 ggsave(paste0("./Outputs/", name, "/", name, " Reach Survival per10km.png"),
@@ -2726,13 +3609,14 @@ cum_survival_2019 <- get_cum_survival((all.inp %>%
                                          filter(StudyID == "SB_Spring_2019")), T)
 cum_survival_2019
 
-cum_survival_all <- bind_rows(cum_survival_2018, cum_survival_2019)
+cum_survival_all <- bind_rows(cum_survival_2018, cum_survival_2019) %>% 
+  mutate_at(vars("cum.phi", "cum.phi.se", "LCI", "UCI"), round, digits = 2)
 
 cum_survival_all <- format.cum.surv(cum_survival_all)
 
 # Plot
 region_breaks <- c(5.5, 7.5, 8.5)
-plot.cum.surv(cum_survival_all, add_breaks = T, multiple = T, padding = 50)
+plot.cum.surv(cum_survival_all, add_breaks = T, multiple = T)
 
 ggsave(paste0("./Outputs/", name, "/", name, " Cumulative Survival.png"),
        width = 10, height = 6, dpi = 500)
